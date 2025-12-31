@@ -1,0 +1,43 @@
+tipe data:
+1 byte = 1 unsigned char
+2 byte = 1 short int
+4 byte = 1 int
+8 byte = 1 long long
+convertion big endian;
+magic number = 8 byte =(0x0108FF02fba30108)
+format:{
+    pralogin:{
+        client:{
+            <1 byte|0x01><8 byte|magic number>
+        }
+        server:{
+            <1 byte|0x01><8 byte|magic number><2 byte|panjang string><string|isi string>
+        }
+    }
+    ping:{
+        client:{
+            <1 byte|0x00><8 byte|magic number><8 byte|token>
+        }
+        server:{
+            <1 byte|0x00><8 byte|magic number>
+        }
+    }
+    login:{
+        client:{
+            <1 byte|0x00><8 byte|magic number><1 byte|tipe>
+            (tipe){
+                0x01:
+                0x02:<4 byte|version>
+                0x03:<1 byte|chunkpart>
+            }
+        }
+        server:{
+            <1 byte|0x00><8 byte|magic number><1 byte|tipe>
+            (tipe){
+                0x01:<4 byte|version>
+                0x02:<8 byte|token>
+                0x03:<1 byte|chunksize><1 byte|chunkpart><mapformat:map per chunk>
+            }
+        }
+    }
+}

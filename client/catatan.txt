@@ -1,0 +1,3 @@
+/p:Configuration=Debug /p:Platform=x64
+Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"
+Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"
