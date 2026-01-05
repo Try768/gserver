@@ -36,7 +36,7 @@ public:
         buffer_bigendian_to_string_short(data,offset,name);
         buffer_bigendian_to<unsigned char>(data,offset,c_size);
     }
-    tilecomponent(std::vector<unsigned char>& data,size_t& offset){
+    tilecomponent(const std::vector<unsigned char>& data,size_t& offset){
         parse(data,offset);
     }
     tilecomponent(std::string name,unsigned char sizeofComponent):name(name),c_size(sizeofComponent){}

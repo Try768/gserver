@@ -15,7 +15,7 @@ class tilelist{
             ref_dump(keluaran);
             return keluaran;
         }
-        bool is_buffer_valid(const std::vector<unsigned char>& buffer,unsigned long long offset){
+        bool is_buffer_valid(const std::vector<unsigned char>& buffer,size_t offset){
             using namespace zt::Internal;
             size_t len;
             if(!parse::checkPrimitiveBigendian<unsigned char>(buffer,offset))return false;
@@ -25,7 +25,7 @@ class tilelist{
             return true;
         }
         //this may throw error
-        bool parse(const std::vector<unsigned char>& buffer,unsigned long long offset){
+        void parse(const std::vector<unsigned char>& buffer,size_t offset){
            buffer_bigendian_to<unsigned char>(buffer,offset,idinchunk);
            buffer_bigendian_to_array(buffer,offset,component);
         }
@@ -39,9 +39,10 @@ class tilelist{
             this->idinchunk=id;
         }
         void setComponent(std::vector<unsigned char> component){
-            this->component=component;
+            if(component.size()<this->component.size())return;
+            this->component.insert(this->component.begin(),component.begin(),component.begin()+component.size());
         }
-        void setComponent(unsigned char componentSize){
+        void setupComponent(unsigned char componentSize){
             for (size_t i = 0; i < componentSize;i++)
             {
                 component.emplace_back(0);

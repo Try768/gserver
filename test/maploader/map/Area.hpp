@@ -159,6 +159,13 @@ struct Area1d
         chunkmap& get(long long x){
             return *(chunks.at(x));
         }
+        chunkmap* get_ptr(long long x){
+            auto itc=chunks.find(x);
+            if(itc!=chunks.end()){
+                return itc->second;
+            }
+            return nullptr;
+        }
         Area1d(){
             chunks.reserve(1024);
         }
@@ -175,8 +182,9 @@ struct Area1d
 
         inline void set_ptr(long long x,chunkmap* chunk){
             //if(chunks.find(x)!=chunks.end())
-            if(chunks[x]){
-                delete chunks[x];
+            auto itc=chunks.find(x);
+            if(itc!=chunks.end()){
+                delete itc->second;
             }
             chunks[x]=chunk;
         }
@@ -259,6 +267,13 @@ struct Area2d{
     chunkmap& get(long long x,long long y){
         return (chunks.at(y)->get(x));
     }
+    chunkmap* get_ptr(long long x,long long y){
+        auto temp=chunks.find(y);
+        if(temp!=chunks.end()){
+            return temp->second->get_ptr(x);
+        }
+        return nullptr;
+    }
     inline const bool has_chunk(long long x,long long y)const{
         auto temp=chunks.find(y);
         if(temp!=chunks.end()){
@@ -275,10 +290,13 @@ struct Area2d{
         chunks[y]->set_ptr(x,p_chunk);
     }
     inline void set_ptr(long long x,long long y,chunkmap* chunk){
-        if(chunks[y]==nullptr){
+        if(chunk==nullptr)return;
+        std::cout<<"Setting chunk at ("<<x<<","<<y<<")\n";
+        auto itc=chunks.find(y);
+        if(itc != chunks.end()){
             chunks[y]=new Area1d();
         }
-        chunks[y]->set_ptr(x,chunk);
+        itc->second->set_ptr(x,chunk);
     }
     inline bool delete_chunk(long long x,long long y){
         auto& temp=chunks.find(y);

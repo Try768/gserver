@@ -73,7 +73,7 @@ private:
             inComponent.push_back(temp);
         }
     }
-    entitycomponent(std::vector<unsigned char>& data,size_t& offset){
+    entitycomponent(const std::vector<unsigned char>& data,size_t& offset){
         parse(data,offset);
     }
     Typein::Component getDefaultComponent()const{

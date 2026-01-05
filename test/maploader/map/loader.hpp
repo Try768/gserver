@@ -5,18 +5,29 @@ class gameMap:public checksumparent{
     
 private:
     /* data */
-    Area2d internalArea;
     UsedArea2d internalUsedArea;
     std::string mapName;
+    Area2d internalArea;
     constexpr static std::array<unsigned char,8> mapSignature ={4,5,6,255,43,57,72,12};
-public:
+    public:
     MapOption mapOptions;
     MapFileParent mapfile;
     const std::string& getMapName()const{
         return mapName;
     }
-    const Area2d getarea()const{
-        return internalArea;
+    bool getchunk(long long x,long long y,chunkmap& temp){
+        if(internalUsedArea.is_found(x,y)){
+            temp=internalArea.get(x,y);
+            return true;
+        }
+        return false;
+    }
+    chunkmap* getchunkptr(long long x,long long y){
+        if(internalUsedArea.is_found(x,y)){
+            std::cout<<"Getting chunk pointer at ("<<x<<","<<y<<")\n";
+            return internalArea.get_ptr(x,y);
+        }
+        return nullptr;
     }
     const UsedArea2d& getUsedArea()const{
         return internalUsedArea;
@@ -25,7 +36,7 @@ public:
         if(!fsmanager::directory::exists(dir)){
             fsmanager::directory::create(dir);
         }
-        if(!fsmanager::directory::exists(dir+"/option.json")){
+        if(!fsmanager::file::exists(dir+"/option.json")){
             MapOption opsi;
             nlohmann::json jsopsi;
             jsopsi["map_name"]=opsi.mapName;
@@ -35,26 +46,23 @@ public:
             jsopsi["is_beta"]=opsi.beta;
             jsopsi["gen_opsi"]["seed"]=opsi.genOption.getSeed();
             jsopsi["gen_opsi"]["is_using_generator"]=opsi.genOption.getUseGenerator();
+            fsmanager::file::write(dir+"/option.json",jsopsi.dump(4));
             mapOptions=opsi;
         }else{
             nlohmann::json jsopsi=nlohmann::json::parse(fsmanager::file::read(dir+"/option.json"));
             if(!mapOptions.getjson(jsopsi)){
                 std::cout<<"error parsing map option\n";
+                mapOptions=MapOption();
             }
         }
-        if(!fsmanager::file::exists(dir+"/main.map")){
-            std::vector<unsigned char> buffer;
-            buffer.reserve(mapSignature.size()+mapName.size()+1);
-            buffer.insert(buffer.end(),mapSignature.begin(),mapSignature.end());
-            fsmanager::file::writebin(dir+"/main.map",buffer);
-        }
+        mapfile=MapFileParent(dir,mapOptions,&internalArea,&internalUsedArea);
     }
     /***
      * x adalah koordinat chunk bukan dalam chunk
      */
-    chunkmap chunkgenerator(size_t x,size_t y){
+    chunkmap* chunkgenerator(long long x,long long y){
         std::cout<<"chunkgen("<<x<<","<<","<<y<<")\n";
-        chunkmap newchunk;
+        chunkmap* newchunk = new chunkmap();
         auto& tile=registry::getTiles();
         if(tile.size()<2){
             std::cout<<"tile kurang dari 2\n";
@@ -62,7 +70,7 @@ public:
             //newchunk.tilesBuffer=emptychunk;
             return newchunk;
         }
-        newchunk.addTileTypes(tile.begin(),tile.begin()+2);
+        newchunk->addTileTypes(tile.begin(),tile.begin()+2);
         //auto& buffer =newchunk.tilesBuffer;
         //buffer.reserve(chunkmap::sizex*chunkmap::sizey);
         for (size_t i = 0; i < chunkmap::sizey; i++)
@@ -71,16 +79,16 @@ public:
             {
                 if(i<90){
                     tilelist air(0);
-                    air.setComponent(newchunk.getTileType(0).getData().c_size);
-                    newchunk.setTile(j,i,air);
+                    air.setupComponent(newchunk->getTileType(0).getData().c_size);
+                    newchunk->setTile(j,i,air);
                 }else if(i<100){
                     tilelist dirt(1);
-                    dirt.setComponent(newchunk.getTileType(1).getData().c_size);
-                    newchunk.setTile(j,i,dirt);
+                    dirt.setupComponent(newchunk->getTileType(1).getData().c_size);
+                    newchunk->setTile(j,i,dirt);
                 }else{
                     tilelist stone(2);
-                    stone.setComponent(newchunk.getTileType(2).getData().c_size);
-                    newchunk.setTile(j,i,stone);
+                    stone.setupComponent(newchunk->getTileType(2).getData().c_size);
+                    newchunk->setTile(j,i,stone);
                 }
             }
             
@@ -92,7 +100,7 @@ public:
                 {
                     
                     auto& data=entity.second.getData();
-                    auto& entitybuffer=newchunk.entitiesBuffer;
+                    auto& entitybuffer=newchunk->entitiesBuffer;
                     entitylist ent(data.id,entity.second.getDefaultComponent(),Coord<unsigned int>((i*3*24/2)%1600,i*x%1600));
                     entitybuffer.push_back(ent);
                 }
@@ -107,8 +115,9 @@ public:
         
        std::cout<<"generatechunk("<<y<<","<<x<<")\n";
         if(internalUsedArea.is_found(x,y)){
-            internalArea.set(x,y,chunkgenerator(x,y));
+            internalArea.set_ptr(x,y,chunkgenerator(x,y));
             internalUsedArea.usedChunkIds[y].usedChunkIds.insert(x);
+            mapfile.creatmapfile(x,y);
         }else{
             return;
         }
@@ -137,7 +146,9 @@ public:
             temp=internalArea.get(x,y);
             return true;
         }
-        temp = chunkgenerator(x,y);
+        auto tempptr = chunkgenerator(x,y);
+        temp=chunkmap(*tempptr);
+        delete tempptr;
         return 0;
     }
     void getChunkRefDumpForPlayer(const playerlist& player,unsigned short radius,std::vector<unsigned char>& buffer){
@@ -145,5 +156,13 @@ public:
         getareaIDforplayer(player,radius,tempo);
         internalArea.dump_ref(buffer,tempo);
     }
+    //dont forget to store it first
+    void savechunk(long long x,long long y){
+        if(internalUsedArea.is_found(x,y)){
+            mapfile.save_chunk(x,y);
+            return;
+        }
+    }
+    
     gameMap(){}
 };

@@ -30,12 +30,17 @@ class chunkmap:public checksumparent
     inline tilecomponent getTileType(unsigned char indeks){
         return listId[indeks];
     }
+    inline size_t getTileTypeCount()const{
+        return listId.size();
+    }
     inline bool delTileType(unsigned char indeks){
         if(listId.size()<indeks)return 0;
         listId.erase(listId.begin()+indeks);
         for(auto& tilebuff:tilesBuffer){
             if(tilebuff.getIdinChunk()>indeks){
                 tilebuff.setIdinChunk(tilebuff.getIdinChunk()-1);
+            }else if(tilebuff.getIdinChunk()==indeks){
+                tilebuff.setIdinChunk(0);
             }
         }
         return 1;
@@ -51,8 +56,11 @@ class chunkmap:public checksumparent
         cssortchar(multiIndeks);
         for(auto& tilebuff:tilesBuffer){
             for(auto& indeks:multiIndeks){
-                if(tilebuff.getIdinChunk()<indeks)break;
+                if(tilebuff.getIdinChunk()>indeks)
                 tilebuff.setIdinChunk(tilebuff.getIdinChunk()-1);
+                else if(tilebuff.getIdinChunk()==indeks){
+                    tilebuff.setIdinChunk(0);
+                }
             }
         }
     }
@@ -150,7 +158,7 @@ class chunkmap:public checksumparent
         unsigned long long checksum;
         buffer_bigendian_to<unsigned long long>(buffer,offset,checksum);
         std::vector<unsigned char> temp;
-        unsigned long long arrlength;
+        size_t arrlength;
         parse::checkArrayBigendian(buffer,offset,arrlength);
         if(buffer.size()<offset+arrlength)return false;
         if(!verifycheksum(buffer.begin()+offset,buffer.begin()+offset+arrlength,checksum))return false;
@@ -165,7 +173,7 @@ class chunkmap:public checksumparent
         }
         offset+=chunkSignature.size();
         unsigned long long checksum;
-        unsigned long long arrlength;
+        size_t arrlength;
         unsigned short arrlengthc;
         buffer_bigendian_to<unsigned long long>(buffer,offset,checksum);
         zt::Internal::parse::checkArrayBigendian(buffer,offset,arrlength);
@@ -185,9 +193,10 @@ class chunkmap:public checksumparent
         {
             tilesBuffer[i].parse(buffer,offset);
         }
-        buffer_bigendian_to_dynamic(buffer,offset,arrlength);
-        entitiesBuffer.clear();entitiesBuffer.reserve(arrlength);
-            for (size_t i = 0; i < arrlength; i++)
+        unsigned long long arlen;
+        buffer_bigendian_to_dynamic(buffer,offset,arlen);
+        entitiesBuffer.clear();entitiesBuffer.reserve(arlen);
+            for (size_t i = 0; i < arlen; i++)
             {
                 entitiesBuffer.emplace_back(buffer,offset);
             }

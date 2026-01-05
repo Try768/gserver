@@ -1,3 +1,12 @@
 /bin
 /include/asio
 /client/include/asio
+*.pdb
+test/maploader/vc140.pdb
+test/maploader/vc140.pdb
+test/maploader/main.pdb
+test/maploader/miniz.obj
+vc140.pdb
+test.pdb
+test/maploader/testmapmain.dat
+test/maploader/main.obj

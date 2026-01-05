@@ -46,7 +46,7 @@ namespace zt::Internal{
             return 1;
         }
         //next time
-        bool checkArrayBigendian(const std::vector<unsigned char>& buffer,size_t& offset,uint64_t& arrlength){
+        bool checkArrayBigendian(const std::vector<unsigned char>& buffer,size_t& offset,size_t& arrlength,unsigned char& btl){
             if(buffer.size()<2+offset){
                 return false;
             }
@@ -54,7 +54,7 @@ namespace zt::Internal{
                 return false;
             }
             offset++;
-            unsigned char btl=buffer[offset];
+            btl=buffer[offset];
             if(btl!=1&&btl!=2&&btl!=4&&btl!=8){
                 return false;
             }
@@ -70,6 +70,11 @@ namespace zt::Internal{
             if(buffer.size()<2+btl+arrlength){
                 return false;
             }
+            return true;
+        }
+        inline bool checkArrayBigendian(const std::vector<unsigned char>& buffer,size_t& offset,size_t& arrlength){
+            unsigned char btl;
+            return checkArrayBigendian(buffer,offset,arrlength,btl);
         }
         inline bool checkStringBigendian(const std::vector<unsigned char>& buffer,size_t& offset,size_t& length){
             if(buffer.size()<3+offset){
@@ -87,6 +92,7 @@ namespace zt::Internal{
             if(buffer.size()<length+offset){
                 return false;
             }
+            return true;
         }
     }
 }
@@ -100,7 +106,7 @@ inline void to_buffer_bigendian(T value, std::vector<unsigned char>& buffer) {
 //this function may throw error
 template<typename T>
 inline void buffer_bigendian_to(const std::vector<unsigned char>& buffer,size_t& offset, T& value){
-    if(!zt::Internal::checkPrimitiveBigendian(buffer,offset))throw std::exception("error:primitif static parsing");
+    if(!zt::Internal::parse::checkPrimitiveBigendian<T>(buffer,offset))throw std::exception("error:primitif static parsing");
     offset-=sizeof(T);
     value=0;
     for(int i=0;i<sizeof(T);++i){
@@ -108,7 +114,6 @@ inline void buffer_bigendian_to(const std::vector<unsigned char>& buffer,size_t&
         offset++;
     }
     //buffer.erase(buffer.begin(),buffer.begin()+sizeof(T)+1);
-    return true;
 }
 inline void dynamic_to_buffer_bigendian(uint64_t value, std::vector<unsigned char>& buffer) {
     unsigned char size=ceklength(value);
@@ -157,6 +162,7 @@ std::string trimStringToShortSize(const std::string& str){
     {
         temp.erase(str.begin()+std::numeric_limits<unsigned short>::max(),str.end());
     }
+    return temp;
 }
 //this function can auto trim any string that biger than unsigned short
 inline void string_short_to_buffer_bigendian(const std::string& str, std::vector<unsigned char>& buffer) {
@@ -187,11 +193,11 @@ inline void array_to_buffer_bigendian(const std::vector<unsigned char>& arr, std
 }
 // this function can throw error
 inline void buffer_bigendian_to_array(const std::vector<unsigned char>& buffer,size_t& offset,std::vector<unsigned char>& arr){
-    uint64_t length;unsigned char btl;
+    size_t length;
     arr.clear();
     //if(!zt::Internal::parse::checkArrayBigendian(buffer,offset,length))throw std::exception("error:array parsing");
     internal_exeption__(zt::Internal::parse::checkArrayBigendian(buffer,offset,length),"error:array parsing");
-    arr.insert(arr.end(),buffer.begin()+(offset),buffer.begin()+offset+btl+length);
+    arr.insert(arr.end(),buffer.begin()+(offset),buffer.begin()+offset+length);
     offset+=length;
     //buffer.erase(buffer.begin(),buffer.begin()+2+btl+length);
 }

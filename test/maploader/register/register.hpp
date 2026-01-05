@@ -56,7 +56,7 @@ class registry{
             buffer_bigendian_to_dynamic(data,offset,id);
             if(!entitycomponent::is_buffer_valid(data,offset))return false;
         }
-
+        return true;
     }
     static const auto& getEntities(){
         return entities;
@@ -65,6 +65,34 @@ class registry{
         return tiles;
     }
     //this may throw errors
+    static void parse(const std::vector<unsigned char>& data,size_t& offset){
+        using namespace zt::Internal;
+        unsigned char len;
+        unsigned long long arrsize;
+        players.clear();
+        buffer_bigendian_to_dynamic(data,offset,arrsize);
+        for (size_t i = 0; i < arrsize; i++)
+        {
+            playerlist temp(data,offset);
+            players[temp.getname()]=temp;
+        }
+        tiles.clear();
+        buffer_bigendian_to<unsigned long long>(data,offset,arrsize);
+        for (size_t i = 0; i < arrsize; i++)
+        {
+            tilecomponent temp(data,offset);
+            tiles.push_back(temp);
+        }
+        entities.clear();
+        buffer_bigendian_to<unsigned long long>(data,offset,arrsize);
+        for (size_t i = 0; i < arrsize; i++)
+        {
+            unsigned long long id;
+            buffer_bigendian_to_dynamic(data,offset,id);
+            entitycomponent temp(data,offset);
+            entities[id]=temp;
+        }
+    }
     static void fullparse(const std::vector<unsigned char>& data,size_t offset){
         using namespace zt::Internal;
         unsigned long long sum;
@@ -78,8 +106,30 @@ class registry{
         buffer_bigendian_to_array(data,offset,temp);
 
         if(checksumparent::verifycheksum(temp.begin(),temp.end(),sum))throw std::runtime_error("Registry checksum invalid");
+        parse(temp,offset);
     }
-    static void fulldump(std::vector<unsigned char> buffer){
+    static bool is_fullbuffer_valid(const std::vector<unsigned char>& data,size_t& offset){
+        using namespace zt::Internal;
+        unsigned long long sum;
+        for (size_t i = 0; i < sign.size(); i++)
+        {
+            if(data[offset++]!=sign[i])return false;
+        }
+        if(!parse::checkPrimitiveBigendian<unsigned long long>(data,offset))return false;
+        buffer_bigendian_to<unsigned long long>(data,offset,sum);
+        std::vector<unsigned char> temp;
+        size_t leng;
+        unsigned char btl;
+        if(!parse::checkArrayBigendian(data,offset,leng,btl))return false;
+        offset-=(btl+2);
+        buffer_bigendian_to_array(data,offset,temp);
+
+        if(!checksumparent::verifycheksum(temp.begin(),temp.end(),sum))return false;
+        size_t tempoffset=0;
+        if(!is_buffer_valid(temp,tempoffset))return false;
+        return true;
+    }
+    static void fulldump(std::vector<unsigned char>& buffer){
         
         buffer.insert(buffer.end(),sign.begin(),sign.end());
         {
@@ -100,6 +150,9 @@ class registry{
     }
     static const playerlist& getplayerbyname(const std::string& namaPlayer){
         return players.at(namaPlayer);
+    }
+    static const auto& getallplayer(){
+        return players;
     }
     static bool delplayer(const std::string& namaPlayer){
         if(players.find(namaPlayer)!=players.end()){

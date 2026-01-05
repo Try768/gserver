@@ -1,5 +1,6 @@
 #pragma once
 #include "internal.hpp"
+
 #include "miniz.h"
 #include <vector>
 #include <string>
@@ -110,8 +111,8 @@ namespace Typein{
                 return false;
                 break;
             }
-            return true;
         }
+        return true;
     }
     //this may throw errors
     void parse(const std::vector<unsigned char>& buffer,size_t& offset){

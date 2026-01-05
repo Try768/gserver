@@ -21,10 +21,13 @@ class entitylist:public Coord_manager_local{
             return true;
         }
         //this may throw errors
-        void parse(const std::vector<unsigned char>& buffer,size_t offset){
+        void parse(const std::vector<unsigned char>& buffer,size_t& offset){
             buffer_bigendian_to<unsigned long long>(buffer,offset,id);
             this->localCoorParse(buffer,offset);
             component.parse(buffer,offset);
+        }
+        entitylist(const std::vector<unsigned char>& buffer,size_t& offset){
+            parse(buffer,offset);
         }
         entitylist(unsigned long long id,Typein::Component component,
             Coord<unsigned int>lokal

@@ -23,7 +23,7 @@ class playerlist:public Coord_manager{
         buffer_bigendian_to_string_short(buffer,offset,playerName);
         this->co_parse(buffer,offset);
     }
-    playerlist(std::vector<unsigned char>& buffer,size_t& offset){
+    playerlist(const std::vector<unsigned char>& buffer,size_t& offset){
         parse(buffer,offset);
     }
     playerlist()=default;
