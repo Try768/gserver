@@ -172,7 +172,7 @@ class MapFileParent{
         }
     }
     bool is_buffer_valid(const std::vector<unsigned char>& buffer,size_t& offset){
-        return registry::is_buffer_valid(buffer,offset);
+        return registry::is_fullbuffer_valid(buffer,offset);
     }
     bool find_chunk(long long x,long long y){
         for(auto& mapfilepair:mapFiles){

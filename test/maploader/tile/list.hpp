@@ -6,14 +6,14 @@ class tilelist{
         unsigned char idinchunk;
         std::vector<unsigned char> component;
     public:
-        inline void ref_dump(std::vector<unsigned char> buffer)const{
-            buffer.push_back(idinchunk);
-            array_to_buffer_bigendian(component,buffer);
-        }
         std::vector<unsigned char> dump(){
             std::vector<unsigned char>keluaran;
             ref_dump(keluaran);
             return keluaran;
+        }
+        inline void ref_dump(std::vector<unsigned char>& buffer)const{
+            buffer.push_back(idinchunk);
+            array_to_buffer_bigendian(component,buffer);
         }
         bool is_buffer_valid(const std::vector<unsigned char>& buffer,size_t offset){
             using namespace zt::Internal;

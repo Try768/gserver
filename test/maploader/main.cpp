@@ -37,6 +37,7 @@ int main(int argc, char const *argv[])
     
     std::cout<<"Jumlah y chunk: "<<pointerArea.usedChunkIds.size()<<std::endl;
     bool runing=true;
+    try{
     while(runing){
         std::string command;
         std::cout<<">>";
@@ -135,6 +136,9 @@ int main(int argc, char const *argv[])
         }
 
             
+    }
+    }catch(const std::exception& e){
+        std::cout<<"Error caught: "<<e.what()<<std::endl;
     }
     //if(cm.tilesBuffer.size()<chunkmap::sizex*chunkmap::sizey){
     //    return 1;

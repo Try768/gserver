@@ -182,11 +182,14 @@ struct Area1d
 
         inline void set_ptr(long long x,chunkmap* chunk){
             //if(chunks.find(x)!=chunks.end())
+            std::cout<<"Setting chunk at x="<<x<<"\n";
             auto itc=chunks.find(x);
             if(itc!=chunks.end()){
+                std::cout<<"Found existing chunk at x="<<x<<"\n";
                 delete itc->second;
             }
             chunks[x]=chunk;
+            std::cout<<"pointer value: "<<(void*)chunk<<"\n";
         }
         inline bool delete_chunk(long long x){
             auto temp=chunks.find(x);
@@ -293,8 +296,10 @@ struct Area2d{
         if(chunk==nullptr)return;
         std::cout<<"Setting chunk at ("<<x<<","<<y<<")\n";
         auto itc=chunks.find(y);
-        if(itc != chunks.end()){
+        if(itc == chunks.end()){
+            std::cout<<"not Found existing Area1d for y="<<y<<"\n";
             chunks[y]=new Area1d();
+            itc=chunks.find(y);
         }
         itc->second->set_ptr(x,chunk);
     }

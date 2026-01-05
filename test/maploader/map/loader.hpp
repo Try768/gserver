@@ -107,14 +107,14 @@ private:
 
             }
         }
-        
+        std::cout<<"chunk generated success at ("<<x<<","<<y<<")\n";
         return newchunk;
     }
     
     inline void storeAndGenerateChunk(long long x,long long y){
         
-       std::cout<<"generatechunk("<<y<<","<<x<<")\n";
-        if(internalUsedArea.is_found(x,y)){
+        if(!internalUsedArea.is_found(x,y)){
+            std::cout<<"generatechunk("<<y<<","<<x<<")\n";
             internalArea.set_ptr(x,y,chunkgenerator(x,y));
             internalUsedArea.usedChunkIds[y].usedChunkIds.insert(x);
             mapfile.creatmapfile(x,y);
@@ -124,7 +124,7 @@ private:
         return;
     }
     inline void storeGeneratedChunk(long long x,long long y,const chunkmap& chunk){
-        if(internalUsedArea.is_found(x,y)){
+        if(!internalUsedArea.is_found(x,y)){
             internalArea.set(x,y,chunk);
             internalUsedArea.usedChunkIds[y].usedChunkIds.insert(x);
         }

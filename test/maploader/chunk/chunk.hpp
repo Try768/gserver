@@ -205,6 +205,7 @@ class chunkmap:public checksumparent
         parse(buffer,offset);
     }
     chunkmap(){
+        std::cout<<"creating a new chunk\n";
         dirty=true;
     };
 };
