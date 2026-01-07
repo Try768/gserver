@@ -41,15 +41,18 @@ private:
     static bool is_buffer_valid(const std::vector<unsigned char>& data,size_t& offset){
         using namespace zt::Internal;
         size_t len;
+        debug_print("checking entitycomponent buffer validity at offset:"<<offset);
         if(!parse::checkPrimitiveBigendian<unsigned long long>(data,offset))return false;
         if(!parse::checkStringBigendian(data,offset,len))return false;
         offset+=len;
         unsigned short compSize;
         if(!parse::checkPrimitiveBigendian<unsigned short>(data,offset))return false;
+        offset-=sizeof(unsigned short);
         buffer_bigendian_to<unsigned short>(data,offset,compSize);
         for (size_t i = 0; i < compSize; i++)
         {
             if(!parse::checkPrimitiveBigendian<unsigned char>(data,offset))return false;
+            offset-=sizeof(unsigned char);
             unsigned char type;
             buffer_bigendian_to<unsigned char>(data,offset,type);
             size_t length;

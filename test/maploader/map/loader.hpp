@@ -129,18 +129,27 @@ private:
             internalUsedArea.usedChunkIds[y].usedChunkIds.insert(x);
         }
     }
-    void getareaIDforplayer(const playerlist& player,unsigned short radius,UsedArea2d& pointerArea){
-        std::cout<<"chunk,rad,sign"<<","<<radius<<","<<player.getchunkcoord().x<<","<<player.getchunkcoord().y<<std::endl;
-        for (long long i = player.getchunkcoord().y-radius; i < player.getchunkcoord().y + radius; i++)
+    void getareaIDforplayer(
+        const playerlist& player,
+        long long radius,
+        UsedArea2d& pointerArea)
+    {
+        auto center = player.getchunkcoord();
+    
+        for (long long y = center.y - radius; y <= center.y + radius; ++y)
         {
-            unsigned short beda=std::abs(radius-i);
-            for (long long j = player.getchunkcoord().x - beda; j < player.getchunkcoord().x + beda; j++)
+            long long dy = std::llabs(y - center.y);
+            if (dy > radius) continue;
+        
+            long long beda = radius - dy;
+        
+            for (long long x = center.x - beda; x <= center.x + beda; ++x)
             {
-                    pointerArea.usedChunkIds[i].usedChunkIds.insert(j);
+                pointerArea.usedChunkIds[y].usedChunkIds.insert(x);
             }
         }
-        
     }
+
     const bool getChunkByID(long long x,long long y,chunkmap& temp){
         if(internalUsedArea.is_found(x,y)){
             temp=internalArea.get(x,y);

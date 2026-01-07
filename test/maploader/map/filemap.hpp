@@ -17,10 +17,17 @@ class MapFile:public checksumparent
     UsedArea2d* usedAreainfile;
     std::vector<unsigned char> dump(){
         std::vector<unsigned char> keluaran;
+        debug_print("entering dump()");
         keluaran.insert(keluaran.end(),mapSignature.begin(),mapSignature.end());
-        string_short_to_buffer_bigendian(idfile,keluaran); 
-        to_buffer_bigendian<unsigned long long>(getcheksum(),keluaran);
-        array_to_buffer_bigendian(bufferdump(),keluaran);
+        string_short_to_buffer_bigendian(idfile,keluaran);
+        unsigned long long sum;
+        std::vector<unsigned char> tempbuffer;
+        bufferdump_ref(tempbuffer);
+        debug_print("bufferdump successful, size:"<<tempbuffer.size());
+        sum=getchecksum(tempbuffer);
+        to_buffer_bigendian<unsigned long long>(sum,keluaran);
+        debug_print("checksum written:"<<sum);
+        array_to_buffer_bigendian(tempbuffer,keluaran);
         return keluaran;
     }
     std::vector<unsigned char> bufferdump()override{
@@ -31,16 +38,19 @@ class MapFile:public checksumparent
     void bufferdump_ref(std::vector<unsigned char>& buffer){
         to_buffer_bigendian(domain.x,buffer);
         to_buffer_bigendian(domain.y,buffer);
-        registry::fulldump(buffer);
+        //registry::fulldump(buffer);
         usedAreainfile->dump_ref(buffer,domain);
+        debug_print("UsedArea2d dumped");
         area->dump_ref(buffer,usedAreainfile->trimed(domain));
+        debug_print("Area2d dumped");
     }
     static bool is_Data_buffer_valid(const std::vector<unsigned char>& data,size_t& offset){
         using namespace zt::Internal;
         if(!parse::checkPrimitiveBigendian<long long>(data,offset))return false;
         if(!parse::checkPrimitiveBigendian<long long>(data,offset))return false;
-        if(!registry::is_buffer_valid(data,offset))return false;
+        //if(!registry::is_buffer_valid(data,offset))return false;
         if(!UsedArea2d::is_buffer_valid(data,offset))return false;
+        debug_print("UsedArea2d buffer valid");
         if(!Area2d::is_buffer_valid(data,offset))return false;
         return true;
     }
@@ -57,7 +67,7 @@ class MapFile:public checksumparent
         offset-=sizeof(unsigned long long);unsigned long long sum;
         buffer_bigendian_to<unsigned long long>(data,offset,sum);
         if(!parse::checkArrayBigendian(data,offset,len))return false;
-        verifycheksum(data.begin()+offset,data.begin()+offset+len,sum);
+        verifychecksum(data.begin()+offset,data.begin()+offset+len,sum);
         if(!is_Data_buffer_valid(data,offset))return false;
         return true;
     }
@@ -65,7 +75,7 @@ class MapFile:public checksumparent
         using namespace zt::Internal;
         buffer_bigendian_to<long long>(data,offset,domain.x);
         buffer_bigendian_to<long long>(data,offset,domain.y);
-        registry::fullparse(data,offset);
+        //registry::fullparse(data,offset);
         usedAreainfile->parse(data,offset);
         area->parse(data,offset,*usedAreainfile);
     }
@@ -80,7 +90,7 @@ class MapFile:public checksumparent
         buffer_bigendian_to<unsigned long long>(buffer,offset,sum);
         std::vector<unsigned char> temp;
         buffer_bigendian_to_array(buffer,offset,temp);
-        if(!verifycheksum(temp.begin(),temp.end(),sum))throw std::runtime_error("Map checksum invalid");
+        if(!verifychecksum(temp.begin(),temp.end(),sum))throw std::runtime_error("Map checksum invalid");
         dataParse(temp,offset);
     }
     std::vector<unsigned char> startup(){
@@ -91,9 +101,11 @@ class MapFile:public checksumparent
         dynamic_to_buffer_bigendian(0,keluaran);
         return keluaran;
     }
-    MapFile(std::string name,std::string dir,Area2d* area_in,UsedArea2d* usedAreainfile):mapName(name),mapDir(dir){
+    MapFile(std::string name,long long x,long long y,std::string dir,Area2d* area_in,UsedArea2d* usedAreainfile):mapName(name),mapDir(dir){
         this->area=area_in;
         this->usedAreainfile=usedAreainfile;
+        this->domain.x=x;
+        this->domain.y=y;
         if(!fsmanager::file::exists(dir+name+".map")){
             fsmanager::file::writebin(dir+name+".map",startup());
         }
@@ -131,20 +143,34 @@ class MapFileParent{
     }
     void save_file(MapFile* mapfile){
         std::vector<unsigned char> dumpdata=mapfile->dump();
+        debug_print("dump successful, size:"<<dumpdata.size());
         fsmanager::file::writebin(mapfile->mapDir+mapfile->mapName+".map",dumpdata);
+        debug_print("file write successful:"+mapfile->mapDir+mapfile->mapName+".map");
         undirty_all_chunks(mapfile);
     }
-    void creatmapfile(size_t x,size_t y){
+    void creatmapfile(long long x,long long y){
+        //std::string target="sch"+std::to_string(x/16)+std::string("_")+std::to_string(y/16)+".map";
+        //auto& mapfileptr=mapFiles[target];
+        //if(!mapfileptr){
+        //    debug_print("Creating new map file for target:"<<target);
+        //    if(area&&usedAreainfile)return;
+        //    mapfileptr=new MapFile(target,mapDir+"/chunks/",area,usedAreainfile);
+        //    debug_print("Map file created at address:"<<(void*)mapfileptr);
+        //}
         std::string target="sch"+std::to_string(x/16)+std::string("_")+std::to_string(y/16)+".map";
-        auto& mapfileptr=mapFiles[target];
-        if(!mapfileptr){
-            if(area&&usedAreainfile)return;
-            mapfileptr=new MapFile(target,mapDir+"/chunks/",area,usedAreainfile);
+        auto& itc=mapFiles.find(target);
+        if(itc==mapFiles.end()){
+            debug_print("Creating new map file for target:"<<target);
+            MapFile* mapfileptr=new MapFile(target,x/16,y/16,mapDir+"/chunks/",area,usedAreainfile);
+            mapFiles[target]=mapfileptr;
+            debug_print("Map file created at address:"<<(void*)mapfileptr);
         }
     }
     void save_all(){
         for(auto& mapfilepair:mapFiles){
             auto& mapfileptr=mapfilepair.second;
+            debug_print("address map file:"<<(void*)mapfileptr);
+            if(!mapfileptr)continue;
             save_file(mapfileptr);
         }
     }
@@ -155,7 +181,7 @@ class MapFileParent{
         std::string target="sch"+std::to_string(x/16)+std::string("_")+std::to_string(y/16)+".map";
         auto& mapfileptr=mapFiles[target];
         if(!mapfileptr){
-            mapfileptr=new MapFile(target,mapDir+"/chunks/",area,usedAreainfile);
+            mapfileptr=new MapFile(target,x/16,y/16,mapDir+"/chunks/",area,usedAreainfile);
         }
         if(!mapfileptr->usedAreainfile->is_found(x,y)){
             mapfileptr->usedAreainfile->usedChunkIds[y].usedChunkIds.insert(x);

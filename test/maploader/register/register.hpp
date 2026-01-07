@@ -3,11 +3,16 @@
 #include "../tile/component.hpp"
 #include "../entity/component.hpp"
 #include "../entity/player/list.hpp"
+constexpr size_t maxplayers=1024;
+constexpr size_t maxtiles=1024*10;
+constexpr size_t maxentities=1024*10;
 class registry{
     private:
     static std::unordered_map<std::string,playerlist> players;
     static std::vector<tilecomponent> tiles;
     static std::unordered_map<unsigned long long,entitycomponent> entities;
+    
+    
     static inline const  std::array<unsigned char,8> sign ={10,20,80,90,40,20,222,0};
     public:
     //flag:1=dgn tile,2=tanpa;
@@ -36,18 +41,24 @@ class registry{
         unsigned long long arrsize;
         if(!parse::checkDynamicBigendian(data,offset,len))return false;
         offset--;buffer_bigendian_to_dynamic(data,offset,arrsize);
+        debug_print("passed dynamic size check:"<<offset);
         for (size_t i = 0; i < arrsize; i++)
         {
             if(!playerlist::is_buffer_valid(data,offset))return false;
         }
+        debug_print("passed playerlist check");
         if(!parse::checkPrimitiveBigendian<unsigned long long>(data,offset))return false;
+        offset-=sizeof(unsigned long long);
         buffer_bigendian_to<unsigned long long>(data,offset,arrsize);
         for (size_t i = 0; i < arrsize; i++)
         {
             if(!tilecomponent::is_buffer_valid(data,offset))return false;
         }
+        debug_print("passed tilecomponent check");
         if(!parse::checkPrimitiveBigendian<unsigned long long>(data,offset))return false;
+        offset-=sizeof(unsigned long long);
         buffer_bigendian_to<unsigned long long>(data,offset,arrsize);
+        debug_print("entitycomponent count check:"<<arrsize);
         for (size_t i = 0; i < arrsize; i++)
         {
             if(!parse::checkDynamicBigendian(data,offset,len))return false;
@@ -56,6 +67,7 @@ class registry{
             buffer_bigendian_to_dynamic(data,offset,id);
             if(!entitycomponent::is_buffer_valid(data,offset))return false;
         }
+        debug_print("passed entitycomponent check");
         return true;
     }
     static const auto& getEntities(){
@@ -71,13 +83,20 @@ class registry{
         unsigned long long arrsize;
         players.clear();
         buffer_bigendian_to_dynamic(data,offset,arrsize);
+        debug_print("parsing playerlist size:"<<arrsize);
+        if(arrsize>maxplayers)throw std::exception("Registry playerlist size exceeded");
+        debug_print("parsing playerlist count:"<<arrsize);
         for (size_t i = 0; i < arrsize; i++)
         {
             playerlist temp(data,offset);
             players[temp.getname()]=temp;
         }
+        debug_print("finished parsing playerlist");
         tiles.clear();
         buffer_bigendian_to<unsigned long long>(data,offset,arrsize);
+        debug_print("parsing tilecomponent size:"<<arrsize);
+        if(arrsize>maxtiles)throw std::exception("Registry tilecomponent size exceeded");
+        debug_print("parsing tilecomponent count:"<<arrsize);
         for (size_t i = 0; i < arrsize; i++)
         {
             tilecomponent temp(data,offset);
@@ -85,6 +104,8 @@ class registry{
         }
         entities.clear();
         buffer_bigendian_to<unsigned long long>(data,offset,arrsize);
+        if(arrsize>maxentities)throw std::exception("Registry entitycomponent size exceeded");
+        debug_print("parsing entitycomponent count:"<<arrsize);
         for (size_t i = 0; i < arrsize; i++)
         {
             unsigned long long id;
@@ -104,9 +125,11 @@ class registry{
         buffer_bigendian_to<unsigned long long>(data,offset,sum);
         std::vector<unsigned char> temp;
         buffer_bigendian_to_array(data,offset,temp);
-
-        if(checksumparent::verifycheksum(temp.begin(),temp.end(),sum))throw std::runtime_error("Registry checksum invalid");
-        parse(temp,offset);
+        debug_print("extracted array size:"<<temp.size()<<"checksum:"<<sum<<","<<offset);
+        size_t tempoffset=0;
+        if(!checksumparent::verifychecksum(temp.begin(),temp.end(),sum))throw std::exception("Registry checksum invalid");
+        debug_print("passed checksum verification");
+        parse(temp,tempoffset);
     }
     static bool is_fullbuffer_valid(const std::vector<unsigned char>& data,size_t& offset){
         using namespace zt::Internal;
@@ -115,18 +138,22 @@ class registry{
         {
             if(data[offset++]!=sign[i])return false;
         }
+        debug_print("passed sign check:"<<offset);
         if(!parse::checkPrimitiveBigendian<unsigned long long>(data,offset))return false;
+        offset-=sizeof(unsigned long long);
         buffer_bigendian_to<unsigned long long>(data,offset,sum);
         std::vector<unsigned char> temp;
         size_t leng;
         unsigned char btl;
+
         if(!parse::checkArrayBigendian(data,offset,leng,btl))return false;
         offset-=(btl+2);
         buffer_bigendian_to_array(data,offset,temp);
-
-        if(!checksumparent::verifycheksum(temp.begin(),temp.end(),sum))return false;
-        size_t tempoffset=0;
-        if(!is_buffer_valid(temp,tempoffset))return false;
+        debug_print("passed array extraction:"<<offset<<","<<leng);
+        if(!checksumparent::verifychecksum(temp.begin(),temp.end(),sum))return false;
+        debug_print("passed checksum verification:"<<offset);
+        size_t tempoffset2=0;
+        if(!is_buffer_valid(temp,tempoffset2))return false;
         return true;
     }
     static void fulldump(std::vector<unsigned char>& buffer){
@@ -135,8 +162,9 @@ class registry{
         {
             std::vector<unsigned char> temp;
             dump(temp);
+            debug_print("dumped registry size:"<<temp.size());
             CheckSumForStatic ast(temp);
-            to_buffer_bigendian<unsigned long long>(ast.getcheksum(),buffer);
+            to_buffer_bigendian<unsigned long long>(ast.getchecksum(),buffer);
             array_to_buffer_bigendian(temp,buffer);
         }
         

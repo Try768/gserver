@@ -11,16 +11,18 @@ struct UsedArea1d
             dynamic_to_buffer_bigendian(usedChunkIds.size(),buffer);
             for (auto a:usedChunkIds)
             {
-                to_buffer_bigendian<unsigned long long>(a,buffer);
+                to_buffer_bigendian<long long>(a,buffer);
             }
         }
         void dump_ref(std::vector<unsigned char>& buffer,Coord<long long>& domain){
             std::vector<unsigned char> tmp;
+            debug_print("Dumping UsedArea1d for x domain:"<<domain.x<<" to "<<domain.x+16);
             dynamic_to_buffer_bigendian(usedChunkIds.size(),buffer);
               for (long long x = domain.x; x < domain.x+16; x++)
                 {
                  if(usedChunkIds.count(x)){
-                      to_buffer_bigendian<unsigned long long>(x,buffer);
+                    debug_print("Dumping chunk x="<<x);
+                      to_buffer_bigendian<long long>(x,buffer);
                  }
                 }
         }
@@ -93,10 +95,11 @@ struct UsedArea2d{
         dynamic_to_buffer_bigendian(usedChunkIds.size(),buffer);
        for (size_t i = domain.y; i < domain.y+16; i++)
        {
-        auto temp = usedChunkIds.find(i);
+        auto& temp = usedChunkIds.find(i);
         if(temp != usedChunkIds.end()){
+            debug_print("Dumping UsedArea1d for y="<<i);
             dynamic_to_buffer_bigendian(i,buffer);
-            temp->second.dump_ref(buffer);
+            temp->second.dump_ref(buffer,domain);
         }
        }
        
@@ -186,6 +189,8 @@ struct Area1d
             auto itc=chunks.find(x);
             if(itc!=chunks.end()){
                 std::cout<<"Found existing chunk at x="<<x<<"\n";
+                if(chunk==itc->second)return;
+debug_print("Deleting existing chunk at x="<<x<<" at address:"<<(void*)itc->second<<"and replace it with:"<<(void*)chunk);
                 delete itc->second;
             }
             chunks[x]=chunk;
@@ -326,9 +331,14 @@ struct Area2d{
     void dump_ref(std::vector<unsigned char>& buffer,UsedArea2d& areaget){
         std::vector<unsigned char> tmp;
         dynamic_to_buffer_bigendian(areaget.usedChunkIds.size(),buffer);
+        debug_print("Dumping Area2d with "<<areaget.usedChunkIds.size()<<" rows");
         for(auto& plus:areaget.usedChunkIds){
             dynamic_to_buffer_bigendian(plus.first,buffer);
-            chunks[plus.first]->dump_ref(buffer,plus.second);
+            auto& itc=chunks.find(plus.first);
+            if(itc==chunks.end()){
+                throw std::runtime_error("Area2d::dump_ref: missing Area1d for y="+std::to_string(plus.first));
+            }
+            chunks.at(plus.first)->dump_ref(buffer,plus.second);
         }
     }
     static bool is_buffer_valid(const std::vector<unsigned char>& buffer,size_t& offset){

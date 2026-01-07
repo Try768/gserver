@@ -7,7 +7,7 @@ class playerlist:public Coord_manager{
     bool nameAproved;
     public:
     static std::unordered_set<std::string> usedPlayername;
-    void dump(std::vector<unsigned char> keluaran){
+    void dump(std::vector<unsigned char>& keluaran){
         string_short_to_buffer_bigendian(playerName,keluaran);
         this->co_dump(keluaran);
     }
@@ -21,6 +21,7 @@ class playerlist:public Coord_manager{
     //this function can throw error
     void parse(const std::vector<unsigned char>& buffer,size_t& offset){
         buffer_bigendian_to_string_short(buffer,offset,playerName);
+        debug_print("parsed playername:"<<playerName);
         this->co_parse(buffer,offset);
     }
     playerlist(const std::vector<unsigned char>& buffer,size_t& offset){

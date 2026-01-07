@@ -25,23 +25,37 @@ class checksumparent{
     virtual std::vector<unsigned char> bufferdump(){
         return {};
     }
-    inline unsigned long long getcheksum(){
+    inline unsigned long long getchecksum(){
         std::vector<unsigned char> buffer=bufferdump();
         return mz_crc32(0,buffer.data(),buffer.size());
     }
-    inline unsigned long long getceksum(const std::vector<unsigned char>& buffer)const{
+    inline unsigned long long getchecksum(const std::vector<unsigned char>& buffer)const{
         return mz_crc32(0,buffer.data(),buffer.size());
     }
-    inline bool verifycheksum(unsigned long long checksum){
-        return getcheksum()==checksum;
+    inline bool verifychecksum(unsigned long long checksum){
+        return getchecksum()==checksum;
     }
-    inline bool verifycheksum(unsigned long long checksum,const std::vector<unsigned char>& buffer)const{
+    inline bool verifychecksum(unsigned long long checksum,const std::vector<unsigned char>& buffer)const{
         return mz_crc32(0,buffer.data(),buffer.size())==checksum;
     }
-    static inline bool verifycheksum(const std::vector<unsigned char>::const_iterator awal,
-        const std::vector<unsigned char>::const_iterator akhir,unsigned long long checksum){
-        return mz_crc32(0,&(*awal),(size_t)(akhir-awal))==checksum;
-    }
+    //static inline bool verifychecksum(const std::vector<unsigned char>::const_iterator awal,
+    //    const std::vector<unsigned char>::const_iterator akhir,unsigned long long checksum){
+    //    return mz_crc32(0,&(*awal),(size_t)(akhir-awal))==checksum;
+    //}
+    static inline bool verifychecksum(
+        std::vector<unsigned char>::const_iterator awal,
+        std::vector<unsigned char>::const_iterator akhir,
+        unsigned long long checksum
+    ){
+        if (awal == akhir)
+            return checksum == 0;
+
+        return mz_crc32(
+            0,
+            std::addressof(*awal),
+            static_cast<size_t>(std::distance(awal, akhir))
+        ) == checksum;
+}
 };
 class CheckSumForStatic{
     private:
@@ -51,13 +65,13 @@ class CheckSumForStatic{
         checksum=mz_crc32(0,buffer.data(),buffer.size());
     }
     CheckSumForStatic(unsigned long long checksum_in):checksum(checksum_in){}
-    bool verifycheksum(unsigned long long checksum_in){
+    bool verifychecksum(unsigned long long checksum_in){
         return checksum_in==checksum;
     }
-    inline unsigned long long getcheksum()const{
+    inline unsigned long long getchecksum()const{
         return checksum;
     }
-    bool verifycheksum(const std::vector<unsigned char>& buffer){
+    bool verifychecksum(const std::vector<unsigned char>& buffer){
         return mz_crc32(0,buffer.data(),buffer.size())==checksum;
     }
 };
@@ -228,12 +242,12 @@ class Coord_manager_local{
         to_buffer_bigendian<unsigned int>(lokal.x,keluaran);
         to_buffer_bigendian<unsigned int>(lokal.y,keluaran);
     }
-    static bool is_local_coor_buffer_valid(const std::vector<unsigned char>& buffer,size_t offset){
+    static bool is_local_coor_buffer_valid(const std::vector<unsigned char>& buffer,size_t& offset){
         using namespace zt::Internal;
         bool a=zt::Internal::parse::checkPrimitiveBigendian<unsigned int>(buffer,offset);
         return parse::checkPrimitiveBigendian<unsigned int>(buffer,offset)&&a;
     }
-    void localCoorParse(const std::vector<unsigned char>& buffer,size_t offset){
+    void localCoorParse(const std::vector<unsigned char>& buffer,size_t& offset){
         buffer_bigendian_to<unsigned int>(buffer,offset,lokal.x);
         buffer_bigendian_to<unsigned int>(buffer,offset,lokal.y);
     }
@@ -258,16 +272,16 @@ class Coord_manager:public Coord_manager_local{
         Coord_manager(){
             global={0,0};
         };
-        static bool is_co_valid(const std::vector<unsigned char>& buffer,size_t offset){
+        static bool is_co_valid(const std::vector<unsigned char>& buffer,size_t& offset){
             bool a=Coord_manager_local::is_local_coor_buffer_valid(buffer,offset);
             using namespace zt::Internal;
             a=parse::checkPrimitiveBigendian<long long>(buffer,offset)&&a;
             return parse::checkPrimitiveBigendian<long long>(buffer,offset)&&a;
         }
-        void co_parse(const std::vector<unsigned char>& buffer,size_t offset){
+        void co_parse(const std::vector<unsigned char>& buffer,size_t& offset){
             this->localCoorParse(buffer,offset);
-            buffer_bigendian_to(buffer,offset,global.x);
-            buffer_bigendian_to(buffer,offset,global.y);
+            buffer_bigendian_to<long long>(buffer,offset,global.x);
+            buffer_bigendian_to<long long>(buffer,offset,global.y);
         }
         Coord_manager(const Coord<long long>& pos):global(pos)
         {

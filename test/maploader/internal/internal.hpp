@@ -8,6 +8,14 @@
 #include <cctype>
 //todo:pisahin fungsi cek dan dumper nya 
 //okey
+#define indebug 1
+#if indebug==1
+#include<iostream>
+#define debug_print(...) std::cout<<__VA_ARGS__<<std::endl;
+#else
+#define debug_print(...)
+#endif
+
 #define internal_exeption__(logic,msg) if(! logic )throw std::exception(msg);
 #define checking(x) if(! x ) return 0;
 inline unsigned char ceklength(size_t value){

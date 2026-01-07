@@ -79,14 +79,14 @@ class chunkmap:public checksumparent
         buff.insert(buff.end(),chunkSignature.begin(),chunkSignature.end());
         std::vector<unsigned char> tmp;tmp.reserve(256*2+16);
         buffer_refdump(tmp);
-        to_buffer_bigendian<unsigned long long>(getceksum(tmp),buff);
+        to_buffer_bigendian<unsigned long long>(getchecksum(tmp),buff);
         return buff;
     }
     void dump_ref(std::vector<unsigned char>& buff)const{
         buff.insert(buff.end(),chunkSignature.begin(),chunkSignature.end());
         std::vector<unsigned char> tmp;tmp.reserve(256*2+16);
         buffer_refdump(tmp);
-        to_buffer_bigendian<unsigned long long>(getceksum(tmp),buff);
+        to_buffer_bigendian<unsigned long long>(getchecksum(tmp),buff);
         array_to_buffer_bigendian(tmp,buff);
     }
     std::vector<unsigned char> bufferdump()override{
@@ -161,7 +161,7 @@ class chunkmap:public checksumparent
         size_t arrlength;
         parse::checkArrayBigendian(buffer,offset,arrlength);
         if(buffer.size()<offset+arrlength)return false;
-        if(!verifycheksum(buffer.begin()+offset,buffer.begin()+offset+arrlength,checksum))return false;
+        if(!verifychecksum(buffer.begin()+offset,buffer.begin()+offset+arrlength,checksum))return false;
         is_Databuffer_valid(buffer,offset);
         return true;
     }
@@ -177,7 +177,7 @@ class chunkmap:public checksumparent
         unsigned short arrlengthc;
         buffer_bigendian_to<unsigned long long>(buffer,offset,checksum);
         zt::Internal::parse::checkArrayBigendian(buffer,offset,arrlength);
-        if(!verifycheksum(buffer.begin()+offset,buffer.begin()+offset+arrlength,checksum))throw std::exception("error:chunk parsing invalid checksum");
+        if(!verifychecksum(buffer.begin()+offset,buffer.begin()+offset+arrlength,checksum))throw std::exception("error:chunk parsing invalid checksum");
         buffer_bigendian_to<unsigned short>(buffer,offset,arrlengthc);
         listId.clear();listId.reserve(arrlengthc);
         {
