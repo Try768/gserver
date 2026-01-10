@@ -25,7 +25,7 @@ class tilelist{
             return true;
         }
         //this may throw error
-        void parse(const std::vector<unsigned char>& buffer,size_t offset){
+        void parse(const std::vector<unsigned char>& buffer,size_t& offset){
            buffer_bigendian_to<unsigned char>(buffer,offset,idinchunk);
            buffer_bigendian_to_array(buffer,offset,component);
         }

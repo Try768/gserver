@@ -11,6 +11,7 @@
 int main(int argc, char const *argv[])
 {
     std::cout<<"Test Map Loader"<<std::endl;
+    try{
     playerlist maincharacter(Coord<unsigned int>(1,5),Coord<long long>(0,0),"asep");
     if(maincharacter.setnametest()){
         if(registry::addplayer(maincharacter)){
@@ -32,12 +33,11 @@ int main(int argc, char const *argv[])
     gameMap mapg;
     mapg.setMapDir("testmap");
     std::cout<<"Map Directory Set"<<std::endl;
-    UsedArea2d pointerArea;
+    IndeksArea2d pointerArea;
     mapg.getareaIDforplayer(registry::getplayerbyname("asep"),3,pointerArea);
     
     std::cout<<"Jumlah y chunk: "<<pointerArea.usedChunkIds.size()<<std::endl;
     bool runing=true;
-    try{
     while(runing){
         std::string command;
         std::cout<<">>";
@@ -103,7 +103,7 @@ int main(int argc, char const *argv[])
                 }
                 pos=nextpos+1;
             }
-            UsedArea2d pointerArea;
+            IndeksArea2d pointerArea;
             mapg.getareaIDforplayer(registry::getplayerbyname(playername),radius,pointerArea);
             for(auto& row: pointerArea.usedChunkIds){
                 for(auto& col: row.second.usedChunkIds){
@@ -119,7 +119,7 @@ int main(int argc, char const *argv[])
                 for(size_t j=0;j<chunkmap::sizey;j++){
                     for(size_t i=0;i<chunkmap::sizex;i++){
                         auto tile=chunkptr->getTile(i,j);
-                        std::cout<<tile.getIdinChunk()<<" ";
+                        std::cout<<(unsigned int)tile.getIdinChunk()<<" ";
                     }
                     std::cout<<std::endl;
                 }
@@ -127,7 +127,7 @@ int main(int argc, char const *argv[])
                 std::cout<<"Chunk ("<<x<<","<<y<<") not found.\n";
             }
         }else if(command.rfind("saveall",0)==0){
-            mapg.mapfile.save_all();
+            mapg.mapfile->save_all();
             std::cout<<"All modified chunk saved.\n";
 
         }

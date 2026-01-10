@@ -24,6 +24,7 @@ class entitylist:public Coord_manager_local{
         void parse(const std::vector<unsigned char>& buffer,size_t& offset){
             buffer_bigendian_to<unsigned long long>(buffer,offset,id);
             this->localCoorParse(buffer,offset);
+            debug_print("normal parsing is completed at offset:"<<offset);
             component.parse(buffer,offset);
         }
         entitylist(const std::vector<unsigned char>& buffer,size_t& offset){

@@ -9,17 +9,17 @@ class MapFile:public checksumparent
     public:
     std::string mapName;//tidak di dump
     std::string mapDir;//tidak di dump
-    std::string idfile;
+    //std::string idfile;
     Coord<long long> domain;
     constexpr static std::array<unsigned char,8> mapSignature ={1,2,3,255,23,45,67,89};
     Area2d* area;
     //from domain(x,y) to domain(x+16,y+16)
-    UsedArea2d* usedAreainfile;
+    IndeksArea2d* usedAreainfile;
     std::vector<unsigned char> dump(){
         std::vector<unsigned char> keluaran;
         debug_print("entering dump()");
         keluaran.insert(keluaran.end(),mapSignature.begin(),mapSignature.end());
-        string_short_to_buffer_bigendian(idfile,keluaran);
+        string_short_to_buffer_bigendian(mapName,keluaran);
         unsigned long long sum;
         std::vector<unsigned char> tempbuffer;
         bufferdump_ref(tempbuffer);
@@ -39,8 +39,8 @@ class MapFile:public checksumparent
         to_buffer_bigendian(domain.x,buffer);
         to_buffer_bigendian(domain.y,buffer);
         //registry::fulldump(buffer);
-        usedAreainfile->dump_ref(buffer,domain);
-        debug_print("UsedArea2d dumped");
+        //usedAreainfile->dump_ref(buffer,domain);
+        //debug_print("UsedArea2d dumped");
         area->dump_ref(buffer,usedAreainfile->trimed(domain));
         debug_print("Area2d dumped");
     }
@@ -49,8 +49,8 @@ class MapFile:public checksumparent
         if(!parse::checkPrimitiveBigendian<long long>(data,offset))return false;
         if(!parse::checkPrimitiveBigendian<long long>(data,offset))return false;
         //if(!registry::is_buffer_valid(data,offset))return false;
-        if(!UsedArea2d::is_buffer_valid(data,offset))return false;
-        debug_print("UsedArea2d buffer valid");
+        //if(!UsedArea2d::is_buffer_valid(data,offset))return false;
+        //debug_print("UsedArea2d buffer valid");
         if(!Area2d::is_buffer_valid(data,offset))return false;
         return true;
     }
@@ -66,51 +66,62 @@ class MapFile:public checksumparent
         if(!parse::checkPrimitiveBigendian<unsigned long long>(data,offset))return false;
         offset-=sizeof(unsigned long long);unsigned long long sum;
         buffer_bigendian_to<unsigned long long>(data,offset,sum);
-        if(!parse::checkArrayBigendian(data,offset,len))return false;
-        verifychecksum(data.begin()+offset,data.begin()+offset+len,sum);
-        if(!is_Data_buffer_valid(data,offset))return false;
+        debug_print("offset checksum:"<<offset);
+        if(!parse::checkArrayBigendian(data,offset,len,clen))return false;
+        offset-=(clen+2);
+        debug_print("di antara")
+        std::vector<unsigned char> temp;
+        buffer_bigendian_to_array(data,offset,temp);
+        if(!verifychecksum(temp.begin(),temp.end(),sum))return 0;
+        debug_print("checksum verified,size:"<<temp.size());
+        len=0;
+        if(!is_Data_buffer_valid(temp,len))return false;
         return true;
     }
     void dataParse(const std::vector<unsigned char>& data,size_t& offset){
         using namespace zt::Internal;
+        debug_print("data parse offset:"<<offset);
         buffer_bigendian_to<long long>(data,offset,domain.x);
         buffer_bigendian_to<long long>(data,offset,domain.y);
         //registry::fullparse(data,offset);
-        usedAreainfile->parse(data,offset);
-        area->parse(data,offset,*usedAreainfile);
+        //usedAreainfile->parse_additional(data,offset);
+        area->parse_additional(data,offset,*usedAreainfile);
     }
     //this function may throw errors
     void parse(const std::vector<unsigned char>& buffer,size_t& offset){
+        debug_print("_______parsing______")
+        debug_print("offset memasuki mapfile:"<<offset)
         if(buffer.size()<mapSignature.size())throw std::runtime_error("Map signature invalid");
         for(size_t i=0;i<mapSignature.size();i++){
             if(buffer[offset++]!=mapSignature[i])throw std::runtime_error("Map signature invalid");
         }
-        buffer_bigendian_to_string_short(buffer,offset,idfile);
+        buffer_bigendian_to_string_short(buffer,offset,mapName);
         unsigned char clen;unsigned long long len;unsigned long long sum;
         buffer_bigendian_to<unsigned long long>(buffer,offset,sum);
         std::vector<unsigned char> temp;
         buffer_bigendian_to_array(buffer,offset,temp);
         if(!verifychecksum(temp.begin(),temp.end(),sum))throw std::runtime_error("Map checksum invalid");
-        dataParse(temp,offset);
+        size_t tempset=0;
+        dataParse(temp,tempset);
     }
     std::vector<unsigned char> startup(){
         std::vector<unsigned char> keluaran;
         keluaran.insert(keluaran.end(),mapSignature.begin(),mapSignature.end());
-        string_short_to_buffer_bigendian(idfile,keluaran);
+        string_short_to_buffer_bigendian(mapName,keluaran);
         keluaran.push_back(10);
         dynamic_to_buffer_bigendian(0,keluaran);
         return keluaran;
     }
-    MapFile(std::string name,long long x,long long y,std::string dir,Area2d* area_in,UsedArea2d* usedAreainfile):mapName(name),mapDir(dir){
+    MapFile(std::string name,long long x,long long y,std::string dir,Area2d* area_in,IndeksArea2d* usedAreainfile):mapName(name),mapDir(dir){
         this->area=area_in;
         this->usedAreainfile=usedAreainfile;
         this->domain.x=x;
         this->domain.y=y;
-        if(!fsmanager::file::exists(dir+name+".map")){
-            fsmanager::file::writebin(dir+name+".map",startup());
-        }
+        //if(!fsmanager::file::exists(dir+name+".map")){
+        //    fsmanager::file::writebin(dir+name+".map",startup());
+        //}
     }
-    MapFile(std::string name,std::string dir,Area2d* area_in,UsedArea2d* usedAreainfile,const std::vector<unsigned char>& buffer,size_t& offset):mapName(name),mapDir(dir){
+    MapFile(std::string name,std::string dir,Area2d* area_in,IndeksArea2d* usedAreainfile,const std::vector<unsigned char>& buffer,size_t& offset):mapName(name),mapDir(dir){
         this->area=area_in;
         this->usedAreainfile=usedAreainfile;
         parse(buffer,offset);
@@ -123,7 +134,7 @@ class MapFileParent{
     MapOption* opsi;
     Area2d* area;
     //from domain(x,y) to domain(x+16,y+16)
-    UsedArea2d* usedAreainfile;
+    IndeksArea2d* usedAreainfile;
     std::unordered_map<std::string,MapFile*> mapFiles;
     public:
     void undirty_all_chunks(MapFile* mapfile){
@@ -157,7 +168,8 @@ class MapFileParent{
         //    mapfileptr=new MapFile(target,mapDir+"/chunks/",area,usedAreainfile);
         //    debug_print("Map file created at address:"<<(void*)mapfileptr);
         //}
-        std::string target="sch"+std::to_string(x/16)+std::string("_")+std::to_string(y/16)+".map";
+
+        std::string target="sch"+std::to_string(zt::util::chunkToDomain(x/16))+std::string("_")+std::to_string(zt::util::chunkToDomain(y/16));
         auto& itc=mapFiles.find(target);
         if(itc==mapFiles.end()){
             debug_print("Creating new map file for target:"<<target);
@@ -178,7 +190,7 @@ class MapFileParent{
         this->opsi=&opsi;
     }
     void save_chunk(long long x,long long y){
-        std::string target="sch"+std::to_string(x/16)+std::string("_")+std::to_string(y/16)+".map";
+        std::string target="sch"+std::to_string(x/16)+std::string("_")+std::to_string(y/16);
         auto& mapfileptr=mapFiles[target];
         if(!mapfileptr){
             mapfileptr=new MapFile(target,x/16,y/16,mapDir+"/chunks/",area,usedAreainfile);
@@ -210,7 +222,7 @@ class MapFileParent{
         return false;
     }
     void parse_file(const std::string& filename){
-        std::vector<unsigned char> buffer=fsmanager::file::readbin(mapDir+"/chunks/"+filename);
+        std::vector<unsigned char> buffer=fsmanager::file::readbin(mapDir+"/chunks/"+filename+".map");
         size_t offset=0;
         MapFile* mapfileptr=new MapFile(filename,mapDir+"/chunks/",area,usedAreainfile,buffer,offset);
         mapFiles[filename]=mapfileptr;
@@ -242,14 +254,20 @@ class MapFileParent{
         auto filelist=fsmanager::directory::list_files_in_directory(dir+"/chunks/");
         for(auto& filename:filelist){
             size_t offset=0;
-            if(MapFile::is_buffer_valid(fsmanager::file::readbin(dir+"/chunks/"+filename),offset))
+            if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".map") == 0)
+            {
+                filename.resize(filename.size() - 4);
+            }else{
+                continue;
+            }
+            if(MapFile::is_buffer_valid(fsmanager::file::readbin(dir+"/chunks/"+filename+".map"),offset))
             parse_file(filename);else{
                 std::cout<<"invalid chunk file found: "<<filename<<"\n"<<"file would be ignored\n";
             }
         }
     }
     //op
-    MapFileParent(std::string dir,MapOption& opsi_in,Area2d* area_in,UsedArea2d* usedAreainfile):mapDir(dir){
+    MapFileParent(std::string dir,MapOption& opsi_in,Area2d* area_in,IndeksArea2d* usedAreainfile):mapDir(dir){
         opsi=&opsi_in;
         this->area=area_in;
         this->usedAreainfile=usedAreainfile;
@@ -257,8 +275,11 @@ class MapFileParent{
     }
     MapFileParent()=default;
     ~MapFileParent(){
+        debug_print("deleting mapfiles")
         for(auto& mapfilepair:mapFiles){
+            debug_print("nama file:"<<mapfilepair.first);
             auto& mapfileptr=mapfilepair.second;
+            debug_print("alamat file:"<<(void*) mapfileptr);
             delete mapfileptr;
         }
     }

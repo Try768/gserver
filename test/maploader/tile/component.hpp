@@ -34,6 +34,7 @@ public:
     //this may throw errors
     void parse(const std::vector<unsigned char>& data,size_t& offset){
         buffer_bigendian_to_string_short(data,offset,name);
+        debug_print("component tile nama:"<<name);
         buffer_bigendian_to<unsigned char>(data,offset,c_size);
     }
     tilecomponent(const std::vector<unsigned char>& data,size_t& offset){

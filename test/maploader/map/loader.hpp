@@ -5,13 +5,13 @@ class gameMap:public checksumparent{
     
 private:
     /* data */
-    UsedArea2d internalUsedArea;
+    IndeksArea2d internalUsedArea;
     std::string mapName;
     Area2d internalArea;
     constexpr static std::array<unsigned char,8> mapSignature ={4,5,6,255,43,57,72,12};
     public:
     MapOption mapOptions;
-    MapFileParent mapfile;
+    MapFileParent* mapfile;
     const std::string& getMapName()const{
         return mapName;
     }
@@ -29,7 +29,7 @@ private:
         }
         return nullptr;
     }
-    const UsedArea2d& getUsedArea()const{
+    const IndeksArea2d& getUsedArea()const{
         return internalUsedArea;
     }
     void setMapDir(std::string dir){
@@ -55,7 +55,7 @@ private:
                 mapOptions=MapOption();
             }
         }
-        mapfile=MapFileParent(dir,mapOptions,&internalArea,&internalUsedArea);
+        mapfile =new MapFileParent(dir,mapOptions,&internalArea,&internalUsedArea);
     }
     /***
      * x adalah koordinat chunk bukan dalam chunk
@@ -70,7 +70,7 @@ private:
             //newchunk.tilesBuffer=emptychunk;
             return newchunk;
         }
-        newchunk->addTileTypes(tile.begin(),tile.begin()+2);
+        newchunk->addTileTypes(tile.begin(),tile.begin()+3);
         //auto& buffer =newchunk.tilesBuffer;
         //buffer.reserve(chunkmap::sizex*chunkmap::sizey);
         for (size_t i = 0; i < chunkmap::sizey; i++)
@@ -117,7 +117,7 @@ private:
             std::cout<<"generatechunk("<<y<<","<<x<<")\n";
             internalArea.set_ptr(x,y,chunkgenerator(x,y));
             internalUsedArea.usedChunkIds[y].usedChunkIds.insert(x);
-            mapfile.creatmapfile(x,y);
+            mapfile->creatmapfile(x,y);
         }else{
             return;
         }
@@ -132,7 +132,7 @@ private:
     void getareaIDforplayer(
         const playerlist& player,
         long long radius,
-        UsedArea2d& pointerArea)
+        IndeksArea2d& pointerArea)
     {
         auto center = player.getchunkcoord();
     
@@ -161,17 +161,22 @@ private:
         return 0;
     }
     void getChunkRefDumpForPlayer(const playerlist& player,unsigned short radius,std::vector<unsigned char>& buffer){
-        UsedArea2d tempo;
+        IndeksArea2d tempo;
         getareaIDforplayer(player,radius,tempo);
         internalArea.dump_ref(buffer,tempo);
     }
     //dont forget to store it first
     void savechunk(long long x,long long y){
         if(internalUsedArea.is_found(x,y)){
-            mapfile.save_chunk(x,y);
+            mapfile->save_chunk(x,y);
             return;
         }
     }
-    
+    ~gameMap(){
+      if(mapfile){
+        delete mapfile;
+        mapfile=nullptr;
+      }  
+    }
     gameMap(){}
 };
