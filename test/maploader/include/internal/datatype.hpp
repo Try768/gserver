@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <variant>
+#include <map>
 #include <iostream>
 #include <unordered_map>
 #include <unordered_set>
@@ -75,11 +76,19 @@ class CheckSumForStatic{
         return mz_crc32(0,buffer.data(),buffer.size())==checksum;
     }
 };
+class EntityComponent;
+class EntityData;
 namespace Typein{
     class Component {
+        friend class EntityComponent;
+        friend class EntityData;
+    private:
+    Component(std::vector<unsigned char>& buffer,size_t& offset){
+        parse(buffer,offset);
+    }
+    Component()=default;
     public:
     std::unordered_map<std::string, MultiValue> data;
-    
     inline MultiValue& operator[](const std::string& key) {
         return data[key];
     }
@@ -190,10 +199,7 @@ namespace Typein{
         }
         
     }
-    Component(std::vector<unsigned char>& buffer,size_t& offset){
-        parse(buffer,offset);
-    }
-    Component()=default;
+    
     void dump(std::vector<unsigned char>& keluaran)const{
         to_buffer_bigendian<unsigned long long>(data.size(),keluaran);
         for (const auto& [key, value] : data) {
@@ -233,6 +239,11 @@ struct Coord
     T x;
     T y;
     Coord(T x=0,T y=0):x(x),y(y){}
+};
+struct Coordinat{
+    Coord<unsigned int> lokal;
+    Coord<long long> global;
+    Coordinat(Coord<unsigned int> lokal,Coord<long long> global):lokal(lokal),global(global){}
 };
 class Coord_manager_local{
     protected:

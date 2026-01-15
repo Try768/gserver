@@ -1,14 +1,16 @@
 #pragma once
 #include "../common.hpp"
 #include "../internal/datatype.hpp"
+#include "../forward.hpp"
 struct Internal_c{
        unsigned char Type;
         std::string Name;
     };
-class entitycomponent
+class EntityComponent
 {
 private:
     /* data */
+    static unsigned long long idcount;
     unsigned long long id;
     std::string idname;
     std::vector<Internal_c> inComponent;
@@ -28,6 +30,7 @@ private:
         ref_dump(keluaran);
         return keluaran;
     }
+    //not updated
     void ref_dump(std::vector<unsigned char>& buffer)const{
          to_buffer_bigendian<unsigned long long>(id,buffer);
         string_short_to_buffer_bigendian(idname,buffer);
@@ -76,7 +79,7 @@ private:
             inComponent.push_back(temp);
         }
     }
-    entitycomponent(const std::vector<unsigned char>& data,size_t& offset){
+    EntityComponent(const std::vector<unsigned char>& data,size_t& offset){
         parse(data,offset);
     }
     Typein::Component getDefaultComponent()const{
@@ -106,8 +109,22 @@ private:
         }
         return keluaran;
     }
-    entitycomponent()=default;
-    entitycomponent(unsigned long long id,
-        std::string idname,std::vector<Internal_c> components):id(id),idname(idname),inComponent(components)
-    {}
+    EntityComponent()=default;
+    EntityComponent(
+        std::string idname,std::vector<Internal_c> components):idname(idname),inComponent(components)
+    {
+        this->id=EntityComponent::idcount;
+        EntityComponent::idcount++;
+    }
+};
+class IndeksEntityComponent{
+    friend class registry;
+    friend class EntityData;
+    friend class chunkmap;
+    private:
+    unsigned long long entityType;
+    IndeksEntityComponent(const EntityComponent& component): entityType(component.getData().id){}
+    IndeksEntityComponent()=default;
+    public:
+    const unsigned long long& get_id()const noexcept{return entityType;}
 };

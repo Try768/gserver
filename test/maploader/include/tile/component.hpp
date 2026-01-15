@@ -1,18 +1,23 @@
 #pragma once
 #include "../common.hpp"
+#include "../forward.hpp"
 class tilecomponent{
 private:
     /* data */
+    static unsigned long long idcount;
     std::string name;
     unsigned char c_size;
-public:
+    
+    unsigned long long id;
     tilecomponent(/* args */)=default;
+    public:
     struct C_tileData{
         const std::string& name;
         const unsigned char& c_size;
+        const unsigned long long id;
     };
     C_tileData getData()const{
-        return{name,c_size};
+        return{name,c_size,id};
     }
     std::vector<unsigned char> dump()const{
         std::vector<unsigned char> keluaran;
@@ -40,5 +45,18 @@ public:
     tilecomponent(const std::vector<unsigned char>& data,size_t& offset){
         parse(data,offset);
     }
-    tilecomponent(std::string name,unsigned char sizeofComponent):name(name),c_size(sizeofComponent){}
+    tilecomponent(std::string name,unsigned char sizeofComponent):name(name),c_size(sizeofComponent){
+        this->id=idcount;
+        idcount++;
+    }
+};
+
+class IndeksTileComponent{
+    friend class registry;
+    friend class tilelist;
+    private:
+    unsigned long long TileType;
+    IndeksTileComponent(const tilecomponent& component):TileType(component.getData().id){}
+    public:
+    const unsigned long long getId()const noexcept{return TileType;}
 };

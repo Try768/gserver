@@ -1,10 +1,12 @@
 #pragma once
 #include "../internal/datatype.hpp"
+//#include "component.hpp"
 #include "../common.hpp"
 class tilelist{
     private:
         unsigned char idinchunk;
         std::vector<unsigned char> component;
+        IndeksTileComponent indeks;
     public:
         std::vector<unsigned char> dump(){
             std::vector<unsigned char>keluaran;
@@ -35,6 +37,9 @@ class tilelist{
         inline auto getIdinChunk()const{
             return idinchunk;
         }
+        inline const auto getIndeks()const{
+            return indeks;
+        }
         void setIdinChunk(unsigned char id){
             this->idinchunk=id;
         }
@@ -49,7 +54,7 @@ class tilelist{
             }
         }
         tilelist()=default;
-        tilelist(unsigned char idinchunk):idinchunk(idinchunk)
+        tilelist(unsigned char idinchunk,IndeksTileComponent indeks):idinchunk(idinchunk),indeks(indeks)
         {}
         
 

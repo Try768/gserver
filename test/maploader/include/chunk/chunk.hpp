@@ -1,80 +1,97 @@
 #pragma once
-#include "../tile/list.hpp"
 #include "../register/register.hpp"
-#include "../entity/list.hpp"
+#include "../tile/list.hpp"
+//#include "../entity/list.hpp"
+#include <deque>
+#include "../entity/entity.hpp"
 class chunkmap:public checksumparent
 {
     public:
     static constexpr unsigned int sizex=16;
     static constexpr unsigned int sizey=16;
     private:
-    std::vector<tilecomponent> tilelistId;
-    //std::vector<entitycomponent> entityTypeList;
+    using ID=unsigned long long;
+    using enc=unsigned long long;
+    class IDMaker{
+        std::unordered_set<ID> free_ids;
+        ID next=0;
+        ID back=0;
+        ID count=0;
+        bool getID(ID& id){
+            if(!free_ids.empty()){
+                auto itc=free_ids.begin();
+                id=*itc;
+                free_ids.erase(itc);
+                next++;count++;
+                return true;
+            }
+            if(count!=ULLONG_MAX){
+                id=next;next++;count++;
+                return true;
+            }return false;
+        }
+        void trimed(){
+            while (true)
+            {
+                auto itc =free_ids.find(back);
+                if(itc==free_ids.end()){
+                    free_ids.erase(itc);
+                    back++;
+                }else{
+                    break;
+                }
+            }
+            
+        }
+        void destroyID(const ID id){
+            if(count==0)return;
+            if(id==back){
+                back++;
+                count--;
+            }else if(back>next){
+                if(id>back||id<next){
+                    free_ids.insert(id);
+                    count--;
+                }
+            }else{
+                if(id>back&&id<next){
+                    free_ids.insert(id);
+                    count--;
+                }
+            }
+        }
+    };
+    //indeks and count
+    std::unordered_map<ID,unsigned short> tilelistId;
+    //indeks and count
+    std::unordered_set<ID,std::unordered_map<ID,entitylist*>> entityBuffer;
     std::array<tilelist,sizex*sizey> tilesBuffer;
     public:
     bool dirty;
-    std::vector<entitylist> entitiesBuffer;
     inline static const std::array<unsigned char,8> chunkSignature ={3,5,7,255,12,34,56,78};
     //can throw error
+    //max 15,min 0
     inline const tilelist& getTile(size_t x,size_t y)const{
         return tilesBuffer[(x)+(y*sizex)];
     }
     inline void setTile(size_t x,size_t y,const tilelist& newTile){
-        if(y<=16||x<=16)return;
-        tilesBuffer[(x)+(y*sizex)]=newTile;
+        if(y>=16||x>=16)return;
+        auto& tile=tilesBuffer[(x)+(y*sizex)];
+        if(!tilelistId[tile.getIndeks().getId()])tilelistId.erase(tile.getIndeks().getId());
+        else tilelistId[tile.getIndeks().getId()]--;
+        ++tilelistId[newTile.getIndeks().getId()];
+        tile=newTile;
     }
-    inline bool addTileType(const tilecomponent& tile){
-        if(tilelistId.size()==256)return 0;
-        tilelistId.push_back(tile);
-        return true;
+    inline void addEntity(Entity entity){
+
     }
-    inline const tilecomponent& getTileType(unsigned char indeks){
-        return tilelistId[indeks];
+    inline Entity getEntity(){}
+    inline bool setEntity(){}
+    inline bool delEntity(){}
+    inline const std::unordered_map<ID,unsigned short>& getAllTypeTile()const{
+        return tilelistId;
     }
-    inline size_t getTileTypeCount()const{
-        return tilelistId.size();
-    }
-    inline bool delTileType(unsigned char indeks){
-        if(tilelistId.size()<indeks)return 0;
-        tilelistId.erase(tilelistId.begin()+indeks);
-        for(auto& tilebuff:tilesBuffer){
-            if(tilebuff.getIdinChunk()>indeks){
-                tilebuff.setIdinChunk(tilebuff.getIdinChunk()-1);
-            }else if(tilebuff.getIdinChunk()==indeks){
-                tilebuff.setIdinChunk(0);
-            }
-        }
-        return 1;
-    }
-    //it will sort all indeks
-    inline bool delTileTypes(std::vector<unsigned char>& multiIndeks){
-        for(auto indeks:multiIndeks){
-            if(tilelistId.size()<indeks)return false;
-        }
-        for(auto indeks:multiIndeks){
-            tilelistId.erase(tilelistId.begin()+indeks);
-        }
-        cssortchar(multiIndeks);
-        for(auto& tilebuff:tilesBuffer){
-            for(auto& indeks:multiIndeks){
-                if(tilebuff.getIdinChunk()>indeks)
-                tilebuff.setIdinChunk(tilebuff.getIdinChunk()-1);
-                else if(tilebuff.getIdinChunk()==indeks){
-                    tilebuff.setIdinChunk(0);
-                }
-            }
-        }
-    }
-    inline bool addTileTypes(const std::vector<tilecomponent>& tiles){
-        if((tilelistId.size()+tiles.size())>256)return 0;
-        tilelistId.insert(tilelistId.begin(),tiles.begin(),tiles.end());
-        return true;
-    }
-    inline bool addTileTypes(const std::vector<tilecomponent>::const_iterator awal,const std::vector<tilecomponent>::const_iterator akhir){
-        if((tilelistId.size()+(akhir-awal))>256)return 0;
-        tilelistId.insert(tilelistId.begin(),awal,akhir);
-        return true;
-    }
+    
     std::vector<unsigned char> dump()const{
         std::vector<unsigned char> buff;
         buff.insert(buff.end(),chunkSignature.begin(),chunkSignature.end());
@@ -222,3 +239,52 @@ class chunkmap:public checksumparent
         dirty=true;
     };
 };
+/*inline bool delTileType(unsigned char indeks){
+    //    if(tilelistId.size()<indeks)return 0;
+    //    tilelistId.erase(tilelistId.begin()+indeks);
+    //    for(auto& tilebuff:tilesBuffer){
+    //        if(tilebuff.getIdinChunk()>indeks){
+    //            tilebuff.setIdinChunk(tilebuff.getIdinChunk()-1);
+    //        }else if(tilebuff.getIdinChunk()==indeks){
+    //            tilebuff.setIdinChunk(0);
+    //        }
+    //    }
+    //    return 1;
+    //}
+    //it will sort all indeks
+    //inline bool delTileTypes(std::vector<unsigned char>& multiIndeks){
+    //    for(auto indeks:multiIndeks){
+    //        if(tilelistId.size()<indeks)return false;
+    //    }
+    //    for(auto indeks:multiIndeks){
+    //        tilelistId.erase(tilelistId.begin()+indeks);
+    //    }
+    //    cssortchar(multiIndeks);
+    //    for(auto& tilebuff:tilesBuffer){
+    //        for(auto& indeks:multiIndeks){
+    //            if(tilebuff.getIdinChunk()>indeks)
+    //            tilebuff.setIdinChunk(tilebuff.getIdinChunk()-1);
+    //            else if(tilebuff.getIdinChunk()==indeks){
+    //                tilebuff.setIdinChunk(0);
+    //            }
+    //        }
+    //    }
+    //}
+    //inline bool addTileTypes(const std::vector<tilecomponent>& tiles){
+    //    if((tilelistId.size()+tiles.size())>256)return 0;
+    //    tilelistId.insert(tilelistId.begin(),tiles.begin(),tiles.end());
+    //    return true;
+    //}
+    //inline bool addTileTypes(const std::vector<tilecomponent>::const_iterator awal,const std::vector<tilecomponent>::const_iterator akhir){
+    //    if((tilelistId.size()+(akhir-awal))>256)return 0;
+    //    tilelistId.insert(tilelistId.begin(),awal,akhir);
+    //    return true;
+    }*/
+//inline bool addTileType(const tilecomponent& tile){
+    //    if(tilelistId.size()==256)return 0;
+    //    tilelistId.push_back(tile);
+    //    return true;
+    //}
+    //inline const tilecomponent& getTileType(unsigned char indeks){
+    //    return tilelistId[indeks];
+    //}
