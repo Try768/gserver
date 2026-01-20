@@ -1,6 +1,7 @@
 /bin
 /include/asio
 /client/include/asio
+test/maploader/build
 *.pdb
 test/maploader/vc140.pdb
 test/maploader/vc140.pdb

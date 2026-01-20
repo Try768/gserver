@@ -1,8 +1,8 @@
-#include "caster.h"
-#include "json.hpp"
+#include <caster.h>
+#include <json.hpp>
 //#include "internal/datatype.hpp"
-#include "map/loader.hpp"
-#include "internal/internal.hpp"
+#include <map/loader.hpp>
+#include <internal/internal.hpp>
 #include <iostream>
 #include <fstream>
 #include <unordered_map>
@@ -22,7 +22,7 @@ int main(int argc, char const *argv[])
         return 1;
     }
 
-    entitycomponent entity(0,"nganu:npc",{});
+    EntityComponent entity("nganu:npc",{});
     registry::entityregister(entity);
     std::cout<<"Entity Added: "<<entity.getData().idname<<std::endl;
     registry::tileregister(tilecomponent("air",0));

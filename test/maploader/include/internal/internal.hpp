@@ -18,6 +18,18 @@
 
 #define internal_exeption__(logic,msg) if(! logic )throw std::exception(msg);
 #define checking(x) if(! x ) return 0;
+inline unsigned char ceklength(unsigned long long value){
+    if(value<=std::numeric_limits<unsigned char>::max()){
+        return 1;
+    }else if(value<=std::numeric_limits<uint16_t>::max()){
+        return 2;
+    }else if(value<=std::numeric_limits<uint32_t>::max()){
+        return 4;
+    }else {
+        return 8;
+    }
+    //if(value<=std::numeric_limits<uint64_t>::max())
+}
 inline unsigned char ceklength(size_t value){
     if(value<=std::numeric_limits<unsigned char>::max()){
         return 1;
@@ -31,6 +43,28 @@ inline unsigned char ceklength(size_t value){
     //if(value<=std::numeric_limits<uint64_t>::max())
 }
 namespace zt::Internal{
+    namespace util{
+        template<class T>
+        class optional{
+            private:
+            T* data;
+            public:
+            const bool is_valid()const{
+                if(data==nullptr)return false;
+                return true;
+            }
+            optional(const T& data){
+                this->data=data;
+            }
+            optional(){
+                this->data=nullptr;
+            }
+            //may throw error or ub if isnt valid
+            T& get(){return *data;}
+            //may throw error or ub if isnt valid
+            const T& getConst()const{return *data;}
+        };
+    }
     namespace parse{
         template<class T>
         inline bool checkPrimitiveBigendian(const std::vector<unsigned char>& buffer,size_t& offset){

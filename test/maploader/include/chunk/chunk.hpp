@@ -10,14 +10,18 @@ class chunkmap:public checksumparent
     static constexpr unsigned int sizex=16;
     static constexpr unsigned int sizey=16;
     private:
+    unsigned char perm_len;
     using ID=unsigned long long;
     using enc=unsigned long long;
+    template<class IDT>
     class IDMaker{
-        std::unordered_set<ID> free_ids;
-        ID next=0;
-        ID back=0;
-        ID count=0;
-        bool getID(ID& id){
+        private:
+        friend class chunkmap;
+        std::unordered_set<IDT> free_ids;
+        IDT next=0;
+        IDT back=0;
+        IDT count=0;
+        bool getID(IDT& id){
             if(!free_ids.empty()){
                 auto itc=free_ids.begin();
                 id=*itc;
@@ -43,7 +47,7 @@ class chunkmap:public checksumparent
             }
             
         }
-        void destroyID(const ID id){
+        void destroyID(const IDT id){
             if(count==0)return;
             if(id==back){
                 back++;
@@ -62,175 +66,70 @@ class chunkmap:public checksumparent
         }
     };
     //indeks and count
-    std::unordered_map<ID,unsigned short> tilelistId;
+    IDMaker<ID> entityid;
+    IDMaker<unsigned char> tileinchunk;
+    std::unordered_map<std::string,std::pair<unsigned char,unsigned short>> tilelistId;
+    std::unordered_map<unsigned char,std::string> tileId;
+    void internal_swap_Tile(const std::string& before,const std::string& after){
+        auto itc =tilelistId.find(before);
+        if(itc!=tilelistId.end()){
+            if(itc->second.second<=0){
+                tileinchunk.destroyID(itc->second.first);
+                tileId.erase(itc->second.first);
+                tilelistId.erase(before);
+            }else{
+                itc->second.second--;
+            }
+        }
+        itc=tilelistId.find(after);
+        if(itc!=tilelistId.end()){
+            itc->second.second++;
+        }else{
+            unsigned char temid;
+            if(!tileinchunk.getID(temid))throw std::exception("some math mistake on tile id");
+            tilelistId[after]=std::pair<unsigned char,unsigned short>(temid,0);
+            tileId[temid]=after;
+        }
+    }
     //indeks and count
-    std::unordered_set<ID,std::unordered_map<ID,entitylist*>> entityBuffer;
-    std::array<tilelist,sizex*sizey> tilesBuffer;
+    std::unordered_map<std::string,std::unordered_map<ID,EntityData>> entityBuffer;
+    std::array<std::pair<TileData,unsigned char>,sizex*sizey> tilesBuffer;
     public:
     bool dirty;
     inline static const std::array<unsigned char,8> chunkSignature ={3,5,7,255,12,34,56,78};
     //can throw error
     //max 15,min 0
-    inline const tilelist& getTile(size_t x,size_t y)const{
-        return tilesBuffer[(x)+(y*sizex)];
+    inline const Tile getTile(unsigned short x,unsigned short y){
+        return Tile(tilesBuffer[x+(y*sizex)].first,tileId.at(tilesBuffer[x*y].second));
     }
-    inline void setTile(size_t x,size_t y,const tilelist& newTile){
+    inline void setTile(size_t x,size_t y,const Tile& newTile){
         if(y>=16||x>=16)return;
         auto& tile=tilesBuffer[(x)+(y*sizex)];
-        if(!tilelistId[tile.getIndeks().getId()])tilelistId.erase(tile.getIndeks().getId());
-        else tilelistId[tile.getIndeks().getId()]--;
-        ++tilelistId[newTile.getIndeks().getId()];
-        tile=newTile;
+        internal_swap_Tile(tileId.at(tile.second),newTile.get_name());
+        tile=std::pair<TileData,unsigned char>(newTile.data,tilelistId.at(newTile.name).first);
     }
-    inline void addEntity(Entity entity){
+    inline ID addEntity(Entity entity){
+        ID tempid;
+        if(!entityid.getID(tempid))throw std::exception("alright alright thats enough entities");
+        entityBuffer[entity.get_name()][tempid]=entity.data;
+        return tempid;
+    }
+    inline Entity getEntity(ID entityid){
 
     }
-    inline Entity getEntity(){}
-    inline bool setEntity(){}
-    inline bool delEntity(){}
-    inline const std::unordered_map<ID,unsigned short>& getAllTypeTile()const{
-        return tilelistId;
+    inline bool setEntity();
+    inline bool delEntity();
+    inline const std::unordered_map<unsigned char,std::string>& getAllTypeTile()const{
+        return tileId;
     }
-    
-    std::vector<unsigned char> dump()const{
-        std::vector<unsigned char> buff;
-        buff.insert(buff.end(),chunkSignature.begin(),chunkSignature.end());
-        std::vector<unsigned char> tmp;tmp.reserve(256*2+16);
-        buffer_refdump(tmp);
-        to_buffer_bigendian<unsigned long long>(getchecksum(tmp),buff);
-        return buff;
-    }
-    void dump_ref(std::vector<unsigned char>& buff)const{
-        buff.insert(buff.end(),chunkSignature.begin(),chunkSignature.end());
-        std::vector<unsigned char> tmp;tmp.reserve(256*2+16);
-        buffer_refdump(tmp);
-        to_buffer_bigendian<unsigned long long>(getchecksum(tmp),buff);
-        array_to_buffer_bigendian(tmp,buff);
-    }
-    std::vector<unsigned char> bufferdump()override{
-        std::vector<unsigned char> keluaran;
-        buffer_refdump(keluaran);
-        return keluaran;
-    }
-    void buffer_refdump(std::vector<unsigned char>& buffer)const{
-        to_buffer_bigendian<unsigned short>(tilelistId.size(),buffer);
-        for (size_t i = 0; i < tilelistId.size(); i++)
-        {
-           tilelistId[i].ref_dump(buffer);
-        }
-        to_buffer_bigendian<unsigned short>(0x100,buffer);
-        for (size_t i = 0; i < sizex*sizey; i++)
-        {
-            tilesBuffer[i].ref_dump(buffer);
-        }
-        dynamic_to_buffer_bigendian(entitiesBuffer.size(),buffer);
-        for(auto bufentity:entitiesBuffer){
-            bufentity.ref_dump(buffer);
-        }
-    }
-    static bool is_Databuffer_valid(const std::vector<unsigned char>& buffer,size_t& offset){
-        using namespace zt::Internal;
-        unsigned short listIdSize;
-        unsigned char tmpc;
-        if(!parse::checkPrimitiveBigendian<unsigned short>(buffer,offset))return false;
-        buffer_bigendian_to<unsigned short>(buffer,offset,listIdSize);
-        {
-            for (size_t i = 0; i < listIdSize; i++)
-            {
-                if(!tilecomponent::is_buffer_valid(buffer,offset))return false;
-            }
-        }
-        unsigned short tileSize;
-        if(!parse::checkPrimitiveBigendian<unsigned short>(buffer,offset))return false;
-        buffer_bigendian_to<unsigned short>(buffer,offset,tileSize);
-        if(tileSize!=0x100)return false;
-        {
-            for (size_t i = 0; i < tileSize; i++)
-            {
-                if(!tilecomponent::is_buffer_valid(buffer,offset))return false;
-            }
-        }
-        unsigned long long entitySize;
-        if(!parse::checkDynamicBigendian(buffer,offset,tmpc))return false;
-        offset--;
-        buffer_bigendian_to_dynamic(buffer,offset,entitySize);
-        if(entitySize>1024)return false;
-        {
-            for (size_t i = 0; i < entitySize; i++)
-            {
-                if(!entitylist::is_buffer_valid(buffer,offset))return false;
-            }
-        }
-        return true;
-    }
-    static bool is_buffer_valid(const std::vector<unsigned char>& buffer,size_t& offset){
-        using namespace zt::Internal;
-        if(buffer.size()<offset+chunkSignature.size()+sizeof(unsigned long long))return false;
-        for (size_t i = 0; i < chunkSignature.size(); i++)
-        {
-            if(buffer[offset++]!=chunkSignature[i])return false;
-        }
-        debug_print("chunkmap valid signature");
-        //offset+=chunkSignature.size();
-        unsigned long long checksum;
-        if(!parse::checkPrimitiveBigendian<unsigned long long>(buffer,offset))return false;
-        offset-=sizeof(unsigned long long);
-        buffer_bigendian_to<unsigned long long>(buffer,offset,checksum);
-        std::vector<unsigned char> temp;
-        size_t arrlength;unsigned char btl;
-        if(!parse::checkArrayBigendian(buffer,offset,arrlength,btl))return false;
-        offset-=(2+btl);buffer_bigendian_to_array(buffer,offset,temp);
-        //if(buffer.size()<offset+arrlength)return false;
-        if(!verifychecksum(temp.begin(),temp.end(),checksum))return false;
-        size_t templen=0;
-        debug_print("chunkmap checksum");
-        is_Databuffer_valid(temp,templen);
-        return true;
-    }
-    void parse_buffer(const std::vector<unsigned char>& buffer,size_t& offset){
-        unsigned short arrlengthc;
-        buffer_bigendian_to<unsigned short>(buffer,offset,arrlengthc);
-        tilelistId.clear();tilelistId.reserve(arrlengthc);
-        {
-            
-            for (size_t i = 0; i < arrlengthc; i++)
-            {
-                tilelistId.emplace_back(buffer,offset);
-            }
-        }
-        debug_print("tile id completed at offset:"<<offset);
-        buffer_bigendian_to(buffer,offset,arrlengthc);
-        if(arrlengthc!=sizex*sizey) throw std::exception("error:jumlah tile buffer tak sesuai");
-        for (size_t i = 0; i < arrlengthc; i++)
-        {
-            tilesBuffer[i].parse(buffer,offset);
-        }
-        debug_print("tile buffer completed at offset:"<<offset);
-        unsigned long long arlen;
-        buffer_bigendian_to_dynamic(buffer,offset,arlen);
-        entitiesBuffer.clear();entitiesBuffer.reserve(arlen);
-        for (size_t i = 0; i < arlen; i++)
-        {
-            entitiesBuffer.emplace_back(buffer,offset);
-        }
-        debug_print("entity buffer completed at offset:"<<offset);
-    }
-    void parse(const std::vector<unsigned char>& buffer,size_t& offset){
-        if(buffer.size()<offset+chunkSignature.size()+sizeof(unsigned long long))throw std::exception("error:chunk parsing invalid size");
-        for (size_t i = 0; i < chunkSignature.size(); i++)
-        {
-            if(buffer[offset+i]!=chunkSignature[i])throw std::exception("error:chunk parsing invalid signature");
-        }
-        offset+=chunkSignature.size();
-        unsigned long long checksum;
-        size_t arrlength=0;
-        std::vector<unsigned char> tarr;
-        buffer_bigendian_to<unsigned long long>(buffer,offset,checksum);
-        buffer_bigendian_to_array(buffer,offset,tarr);
-        debug_print("checksum had been extracted");
-        if(!verifychecksum(tarr.begin(),tarr.end(),checksum))throw std::exception("error:chunk parsing invalid checksum");
-        parse_buffer(tarr,arrlength);
-    }
+    std::vector<unsigned char> dump()const;
+    void dump_ref(std::vector<unsigned char>& buff)const;
+    std::vector<unsigned char> bufferdump()override;
+    void buffer_refdump(std::vector<unsigned char>& buffer)const;
+    static bool is_Databuffer_valid(const std::vector<unsigned char>& buffer,size_t& offset);
+    static bool is_buffer_valid(const std::vector<unsigned char>& buffer,size_t& offset);
+    void parse_buffer(const std::vector<unsigned char>& buffer,size_t& offset);
+    void parse(const std::vector<unsigned char>& buffer,size_t& offset);
     chunkmap(const std::vector<unsigned char>& buffer,size_t& offset){
         parse(buffer,offset);
     }

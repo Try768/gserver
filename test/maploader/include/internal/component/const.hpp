@@ -46,7 +46,7 @@ namespace Const_component_type{
 class Const_component{
     protected:
     using cct=Const_component_type::Type;
-    const cct type=cct::None;
+    cct type=cct::None;
     explicit Const_component(cct Type=cct::None):type(type){}
     public:
     cct get_type()const{return type;}
@@ -100,10 +100,12 @@ class Const_component_Object final:public Const_component{
         if (it == value.end()) return nullptr;
         return it->second;
     }
+    const_iterator find(std::string key)const noexcept{return value.find(key);}
     //void set(const std::string& key, Const_component* v) {
     //    value[key] = v;
     //}
     explicit Const_component_Object(std::unordered_map<std::string,Const_component*> value):value(value),Const_component(cct::Object){}
+    explicit Const_component_Object():value(),Const_component(cct::None){}
     const Const_component*& operator[](const std::string key){
         return value[key];
     }

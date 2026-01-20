@@ -1,5 +1,8 @@
 #pragma once
 class registry;
-class tilelist;
-class entitylist;
+class TileData;
+class EntityData;
 class chunkmap;
+namespace executionProses{
+    void earlyExecution();
+};

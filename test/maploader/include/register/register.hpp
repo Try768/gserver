@@ -1,8 +1,10 @@
 #pragma once
+#include "forward.hpp"
 #include "../common.hpp"
 #include "../tile/component.hpp"
 #include "../entity/component.hpp"
 #include "../entity/entity.hpp"
+#include "tile/tile.hpp"
 #include "../entity/player/list.hpp"
 constexpr size_t maxplayers=1024;
 constexpr size_t maxtiles=1024*10;
@@ -10,84 +12,53 @@ constexpr size_t maxentities=1024*10;
 class registry{
     private:
     static std::unordered_map<std::string,playerlist> players;
-    static std::vector<tilecomponent> tiles;
-    static std::unordered_map<unsigned long long,EntityComponent> entities;
+    //static std::unordered_map<std::string,unsigned long long> nametiles; 
+    //static std::unordered_map<std::string,unsigned long long> nameentities; 
+    static std::unordered_map<std::string,tilecomponent::Internal> tiles;
+    static std::unordered_map<std::string,EntityComponent::Internal> entities;
+    static unsigned long long idcounte;
+    static unsigned long long idcountt;
+    std::unordered_map<std::string,bool(*)(EntityData&,const Const_component&)> customComponents;
     static inline const  std::array<unsigned char,8> sign ={10,20,80,90,40,20,222,0};
+    friend void executionProses::earlyExecution();
+    static bool entityregister(const std::string& idname,const Const_component_Object& CCO);
+    static bool tileregister(std::string name,unsigned char sizeofComponent){
+        if(!entities.count(name))return false;
+        entities.try_emplace(name,sizeofComponent);
+        idcountt++;
+    }
+    bool addEntityCustomComponent(bool(*componentFunction)(EntityData&,const Const_component&),const std::string& componentName);
+    bool addTileCustomComponent(bool(*componentFunction)(EntityData&,const Const_component&),const std::string& componentName);
     public:
+    bool callEntityCustomComponent(const std::string&,EntityData& data,const Const_component& const_component);
+    bool callTileCustomComponent(const std::string&,EntityData& data,const Const_component& const_component);
+    static const IndeksEntityComponent getEntityComponentByName(std::string name){
+        auto itc=entities.find(name);
+        if(itc!=entities.end()){
+            return IndeksEntityComponent((itc->second));
+        }
+        return IndeksEntityComponent();
+    }
+    static const IndeksTileComponent getTileComponentByName(std::string name){
+         auto itc=tiles.find(name);
+        if(itc!=tiles.end()){
+            return IndeksTileComponent((itc->second));
+        }
+        return IndeksTileComponent();
+    }
     //flag:1=dgn tile,2=tanpa;
     struct dumping{
-        static void players(std::vector<unsigned char>& keluaran){
-            dynamic_to_buffer_bigendian(registry::players.size(),keluaran);
-            for (auto& player:registry::players)
-            {
-                player.second.dump(keluaran);
-            }
-        }
-        static void tiles(std::vector<unsigned char>& keluaran){
-            to_buffer_bigendian<unsigned long long>(registry::tiles.size(),keluaran);
-            for(auto& tile:registry::tiles){
-                tile.ref_dump(keluaran);
-            }
-        }
-        static void entity(std::vector<unsigned char>& keluaran){
-            to_buffer_bigendian<unsigned long long>(registry::entities.size(),keluaran);
-            for (auto& ent:registry::entities)
-            {
-                dynamic_to_buffer_bigendian(ent.first,keluaran);
-                ent.second.ref_dump(keluaran);
-            }
-        }
+        static void players(std::vector<unsigned char>& keluaran);
+        //static void tiles(std::vector<unsigned char>& keluaran);
+        //static void entity(std::vector<unsigned char>& keluaran);
     };
-    static void dump(std::vector<unsigned char>& keluaran){
-        dumping::players(keluaran);
-    }
+    static void dump(std::vector<unsigned char>& keluaran);
     struct check{
         private:
         public:
-        static bool entities(const std::vector<unsigned char>& data,size_t& offset){
-            using namespace zt::Internal;
-            unsigned char len;
-            unsigned long long arrsize;
-            if(!parse::checkPrimitiveBigendian<unsigned long long>(data,offset))return false;
-            offset-=sizeof(unsigned long long);
-            buffer_bigendian_to<unsigned long long>(data,offset,arrsize);
-            debug_print("entitycomponent count check:"<<arrsize);
-            for (size_t i = 0; i < arrsize; i++)
-            {
-                if(!parse::checkDynamicBigendian(data,offset,len))return false;
-                offset--;
-                unsigned long long id;
-                buffer_bigendian_to_dynamic(data,offset,id);
-                if(!EntityComponent::is_buffer_valid(data,offset))return false;
-            }
-            debug_print("passed entitycomponent check");
-        }
-        static bool tiles(const std::vector<unsigned char>& data,size_t& offset){
-            using namespace zt::Internal;
-            unsigned char len;
-            unsigned long long arrsize;
-            if(!parse::checkPrimitiveBigendian<unsigned long long>(data,offset))return false;
-            offset-=sizeof(unsigned long long);
-            buffer_bigendian_to<unsigned long long>(data,offset,arrsize);
-            for (size_t i = 0; i < arrsize; i++)
-            {
-                if(!tilecomponent::is_buffer_valid(data,offset))return false;
-            }
-            debug_print("passed tilecomponent check");
-        }
-        static bool players(const std::vector<unsigned char>& data,size_t& offset){
-            using namespace zt::Internal;
-            unsigned char len;
-            unsigned long long arrsize;
-            if(!parse::checkDynamicBigendian(data,offset,len))return false;
-            offset--;buffer_bigendian_to_dynamic(data,offset,arrsize);
-            debug_print("passed dynamic size check:"<<offset);
-            for (size_t i = 0; i < arrsize; i++)
-            {
-                if(!playerlist::is_buffer_valid(data,offset))return false;
-            }
-            debug_print("passed playerlist check");
-        }
+        //static bool entities(const std::vector<unsigned char>& data,size_t& offset);
+        //static bool tiles(const std::vector<unsigned char>& data,size_t& offset);
+        static bool players(const std::vector<unsigned char>& data,size_t& offset);
     };
     static inline bool is_buffer_valid(const std::vector<unsigned char>& data,size_t& offset){
         using namespace zt::Internal;
@@ -99,117 +70,35 @@ class registry{
     static const auto& getEntities(){
         return entities;
     }
+    using InTileComponent=zt::Internal::util::optional<tilecomponent>;
+    static const InTileComponent getTilebyname(std::string name){
+        namespace utility=zt::Internal::util;
+        auto itc = tiles.find(name);
+        if(itc==tiles.end())return utility::optional<tilecomponent>();
+        return utility::optional<tilecomponent>(tilecomponent(name,itc->second));
+    }
+    using InEntityComponent=zt::Internal::util::optional<EntityComponent>;
+    static const InEntityComponent getentitybyname(std::string name){
+        namespace utility=zt::Internal::util;
+        auto itc = entities.find(name);
+        if(itc==entities.end())return InEntityComponent();
+        return InEntityComponent(EntityComponent(name,itc->second));
+    }
     static const auto& getTiles(){
         return tiles;
     }
     //this may throw errors
     struct parsing{
-        static void players(const std::vector<unsigned char>& data,size_t& offset){
-            using namespace zt::Internal;
-            unsigned char len;
-            unsigned long long arrsize;
-            registry::players.clear();
-            buffer_bigendian_to_dynamic(data,offset,arrsize);
-            debug_print("parsing playerlist size:"<<arrsize);
-            if(arrsize>maxplayers)throw std::exception("Registry playerlist size exceeded");
-            debug_print("parsing playerlist count:"<<arrsize);
-            for (size_t i = 0; i < arrsize; i++)
-            {
-                playerlist temp(data,offset);
-                registry::players[temp.getname()]=temp;
-            }
-            debug_print("finished parsing playerlist");
-        }
-        static void tiles(const std::vector<unsigned char>& data,size_t& offset){
-            using namespace zt::Internal;
-            unsigned char len;
-            unsigned long long arrsize;
-            registry::tiles.clear();
-            buffer_bigendian_to<unsigned long long>(data,offset,arrsize);
-            debug_print("parsing tilecomponent size:"<<arrsize);
-            if(arrsize>maxtiles)throw std::exception("Registry tilecomponent size exceeded");
-            debug_print("parsing tilecomponent count:"<<arrsize);
-            for (size_t i = 0; i < arrsize; i++)
-            {
-                tilecomponent temp(data,offset);
-                registry::tiles.push_back(temp);
-            }
-        }
-        static void entities(const std::vector<unsigned char>& data,size_t& offset){
-            using namespace zt::Internal;
-            unsigned char len;
-            unsigned long long arrsize;
-            registry::entities.clear();
-            buffer_bigendian_to<unsigned long long>(data,offset,arrsize);
-            if(arrsize>maxentities)throw std::exception("Registry entitycomponent size exceeded");
-            debug_print("parsing entitycomponent count:"<<arrsize);
-            for (size_t i = 0; i < arrsize; i++)
-            {
-                unsigned long long id;
-                buffer_bigendian_to_dynamic(data,offset,id);
-                EntityComponent temp(data,offset);
-                registry::entities[id]=temp;
-            }
-        }
+        static void players(const std::vector<unsigned char>& data,size_t& offset);
+        //static void tiles(const std::vector<unsigned char>& data,size_t& offset);
+        //static void entities(const std::vector<unsigned char>& data,size_t& offset);
     };
     static void parse(const std::vector<unsigned char>& data,size_t& offset){
         parsing::players(data,offset);
     }
-    static void fullparse(const std::vector<unsigned char>& data,size_t offset){
-        using namespace zt::Internal;
-        unsigned long long sum;
-        unsigned long long arrsize;
-        for (size_t i = 0; i < sign.size(); i++)
-        {
-            if(data[offset++]!=sign[i])throw std::runtime_error("Registry sign invalid");
-        }
-        buffer_bigendian_to<unsigned long long>(data,offset,sum);
-        std::vector<unsigned char> temp;
-        buffer_bigendian_to_array(data,offset,temp);
-        debug_print("extracted array size:"<<temp.size()<<"checksum:"<<sum<<","<<offset);
-        size_t tempoffset=0;
-        if(!checksumparent::verifychecksum(temp.begin(),temp.end(),sum))throw std::exception("Registry checksum invalid");
-        debug_print("passed checksum verification");
-        parse(temp,tempoffset);
-    }
-    static bool is_fullbuffer_valid(const std::vector<unsigned char>& data,size_t& offset){
-        using namespace zt::Internal;
-        unsigned long long sum;
-        for (size_t i = 0; i < sign.size(); i++)
-        {
-            if(data[offset++]!=sign[i])return false;
-        }
-        debug_print("passed sign check:"<<offset);
-        if(!parse::checkPrimitiveBigendian<unsigned long long>(data,offset))return false;
-        offset-=sizeof(unsigned long long);
-        buffer_bigendian_to<unsigned long long>(data,offset,sum);
-        std::vector<unsigned char> temp;
-        size_t leng;
-        unsigned char btl;
-
-        if(!parse::checkArrayBigendian(data,offset,leng,btl))return false;
-        offset-=(btl+2);
-        buffer_bigendian_to_array(data,offset,temp);
-        debug_print("passed array extraction:"<<offset<<","<<leng);
-        if(!checksumparent::verifychecksum(temp.begin(),temp.end(),sum))return false;
-        debug_print("passed checksum verification:"<<offset);
-        size_t tempoffset2=0;
-        if(!is_buffer_valid(temp,tempoffset2))return false;
-        return true;
-    }
-    static void fulldump(std::vector<unsigned char>& buffer){
-        
-        buffer.insert(buffer.end(),sign.begin(),sign.end());
-        {
-            std::vector<unsigned char> temp;
-            dump(temp);
-            debug_print("dumped registry size:"<<temp.size());
-            CheckSumForStatic ast(temp);
-            to_buffer_bigendian<unsigned long long>(ast.getchecksum(),buffer);
-            array_to_buffer_bigendian(temp,buffer);
-        }
-        
-    }
+    static void fullparse(const std::vector<unsigned char>& data,size_t offset);
+    static bool is_fullbuffer_valid(const std::vector<unsigned char>& data,size_t& offset);
+    static void fulldump(std::vector<unsigned char>& buffer);
     static bool addplayer(const playerlist player){
         if(playerlist::usedPlayername.find(player.getname()) != playerlist::usedPlayername.end()){
             registry::players[player.getname()]=player;
@@ -230,25 +119,6 @@ class registry{
         }
         return false;
     }
-    static bool entityregister(const EntityComponent entity){
-        if(entities.find(entity.getData().id)!=entities.end()){
-            return false;
-        }
-        entities[entity.getData().id]=entity;
-        return true;
-    }
-    //static bool delEntityregistered(unsigned long long entityId){
-    //    if(registry::entities.find(entityId)!=registry::entities.end()){
-    //        registry::entities.erase(entityId);
-    //        return true;
-    //    }
-    //    return false;
-    //    
-    //}
-    static void tileregister(const tilecomponent tile){
-        registry::tiles.push_back(tile);
-    }
+    
 };
-std::unordered_map<std::string,playerlist> registry::players={};
-std::vector<tilecomponent> registry::tiles={};
-std::unordered_map<unsigned long long,EntityComponent> registry::entities={};
+

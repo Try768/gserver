@@ -1,4 +1,4 @@
 #pragma once
-class game{
-
+namespace executionProses{
+    void earlyExecution();
 };
