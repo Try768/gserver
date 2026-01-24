@@ -1,0 +1,12 @@
+{
+    "format_version":"-beta",
+    "header":{
+        "id":"dirt"
+    },
+    "properties":{
+        "collision":{
+            "status":"full"
+        }
+    },
+    "send_to_client":[]
+}

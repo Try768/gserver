@@ -1,9 +1,0 @@
-#pragma once
-#include <vector>
-#include <unordered_set>
-#include <unordered_map>
-#include <algorithm>
-#include "datatype.hpp"
-#include "filemanager.hpp"
-#include "miniz.h"
-#include "json.hpp"
