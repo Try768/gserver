@@ -1,10 +1,11 @@
 #pragma once
 #include "internal.hpp"
-
+#include <sstream>
 #include "miniz.h"
 #include <vector>
 #include <string>
 #include <variant>
+#include <cmath>
 #include <map>
 #include <iostream>
 #include <unordered_map>
@@ -239,36 +240,156 @@ struct Coord
     T x;
     T y;
     Coord(T x=0,T y=0):x(x),y(y){}
+    Coord operator+(const Coord& other){
+        return {x+other.x,y+other.y};
+    }
 };
 struct Coordinat{
-    Coord<unsigned int> lokal;
+    private:
+    static constexpr int makslokal =((16/2)*100)-1;
+    static constexpr int minlokal =-(16/2)*100;
+    static constexpr int lenlokal =1600;
+    Coord<int16_t> lokal;
     Coord<long long> global;
-    Coordinat(Coord<unsigned int> lokal,Coord<long long> global):lokal(lokal),global(global){}
+    static inline long long toAbsolute(
+        long long global,
+        int lokal
+    ){
+        return global * lenlokal + (lokal + makslokal);
+    }
+    public:
+    Coordinat(Coord<int16_t> lokal,Coord<long long> global):lokal(lokal),global(global){}
+    Coordinat operator+(const Coordinat& other){
+        return Coordinat(lokal+other.lokal,global+other.global);
+    }
+
+    inline std::string toStringGL(
+        const Coord<long long>& global,
+        const Coord<int16_t>& lokal
+    ) {
+        std::ostringstream oss;
+        oss << "G(" << global.x << ", " << global.y << ") "
+            << "| L(" << lokal.x << ", " << lokal.y << ")";
+        return oss.str();
+    }
+    inline std::string toStringWorldPretty(
+        const Coord<long long>& g,
+        const Coord<int16_t>& l
+    ) {
+        std::ostringstream oss;
+        oss << "W("
+            << g.x << std::setw(4) << std::setfill('0') << l.x
+            << ", "
+            << g.y << std::setw(4) << std::setfill('0') << l.y
+            << ")";
+        return oss.str();
+    }
+    Coordinat& operator+=(const Coord<double>& other) {
+       Coordinat out = *this;
+
+        // ===== X =====
+        long long ox =
+            toAbsolute(global.x, lokal.x) +
+            (long long)std::floor(other.x * 100);
+
+        long long gx = zt::util::floordiv(ox, lenlokal);
+        long long lx = ox - gx * lenlokal;
+
+        out.global.x = gx;
+        out.lokal.x  = (int)(lx - makslokal);
+
+        // ===== Y =====
+        long long oy =
+            toAbsolute(global.y, lokal.y) +
+            (long long)std::floor(other.y * 100);
+
+        long long gy = zt::util::floordiv(oy, lenlokal);
+        long long ly = oy - gy * lenlokal;
+
+        out.global.y = gy;
+        out.lokal.y  = (int)(ly - makslokal);
+        return out;
+    }
+    inline std::string toStringWorldLazy(
+        const Coord<long long>& g,
+        const Coord<int16_t>& l
+    ) {
+        return "W(" +
+            std::to_string(g.x) + ":" +
+            std::to_string(l.x) + ", " +
+            std::to_string(g.y) + ":" +
+            std::to_string(l.y) +
+        ")";
+    }
+    Coordinat operator+(const Coord<double>& other) const {
+        Coordinat out = *this;
+
+        // ===== X =====
+        long long ox =
+            toAbsolute(global.x, lokal.x) +
+            (long long)std::floor(other.x * 100);
+
+        long long gx = zt::util::floordiv(ox, lenlokal);
+        long long lx = ox - gx * lenlokal;
+
+        out.global.x = gx;
+        out.lokal.x  = (int)(lx - makslokal);
+
+        // ===== Y =====
+        long long oy =
+            toAbsolute(global.y, lokal.y) +
+            (long long)std::floor(other.y * 100);
+
+        long long gy = zt::util::floordiv(oy, lenlokal);
+        long long ly = oy - gy * lenlokal;
+
+        out.global.y = gy;
+        out.lokal.y  = (int)(ly - makslokal);
+        return out;
+    }
+
 };
+
+struct velo2{
+    double x, y;
+    void addForce(velo2&& force){
+        x+=force.x;
+        y+=force.y;
+    }
+    void apply(double friction,Coordinat& pos,long long deltatime){
+        if(friction<0)friction=0;
+        pos+=Coord(x,y);
+        x-=std::clamp(x,-friction,friction);
+        y-=std::clamp(y,-friction,friction);
+    }
+};
+
 class Coord_manager_local{
     protected:
-    Coord<unsigned int> lokal;
+    Coord<int16_t> lokal;
     Coord_manager_local()=default;
     void localdump(std::vector<unsigned char>& keluaran)const{
-        to_buffer_bigendian<unsigned int>(lokal.x,keluaran);
-        to_buffer_bigendian<unsigned int>(lokal.y,keluaran);
+        to_buffer_bigendian<int16_t>(lokal.x,keluaran);
+        to_buffer_bigendian<int16_t>(lokal.y,keluaran);
     }
     static bool is_local_coor_buffer_valid(const std::vector<unsigned char>& buffer,size_t& offset){
         using namespace zt::Internal;
-        bool a=zt::Internal::parse::checkPrimitiveBigendian<unsigned int>(buffer,offset);
-        return parse::checkPrimitiveBigendian<unsigned int>(buffer,offset)&&a;
+        bool a=zt::Internal::parse::checkPrimitiveBigendian<int16_t>(buffer,offset);
+        return parse::checkPrimitiveBigendian<int16_t>(buffer,offset)&&a;
     }
     void localCoorParse(const std::vector<unsigned char>& buffer,size_t& offset){
-        buffer_bigendian_to<unsigned int>(buffer,offset,lokal.x);
-        buffer_bigendian_to<unsigned int>(buffer,offset,lokal.y);
+        buffer_bigendian_to<int16_t>(buffer,offset,lokal.x);
+        buffer_bigendian_to<int16_t>(buffer,offset,lokal.y);
     }
     public:
-    inline void setlocalcoord(Coord<unsigned int> lokal){
+    inline void setlocalcoord(const Coord<int16_t>& lokal){
             this->lokal=lokal;
     }
-    inline Coord<unsigned int> getlocalcoord()const{
+    inline Coord<int16_t> getlocalcoord()const{
             return lokal;
-            
+    }
+    inline const Coord<int16_t>& getreflocal() const{
+         return lokal;
     }
 };
 class Coord_manager:public Coord_manager_local{
@@ -306,5 +427,20 @@ class Coord_manager:public Coord_manager_local{
             this->global=chunk;
         }
 };
+//maks = maks int if posible
+    //Coordinat operator+(const Coord<double>& other){
+    //    long long ox=std::floor(other.x*100);
+    //    long long oy=(std::floor(other.y*100));
+    //    ox+=lokal.x;
+    //    if(ox>makslokal){
+    //        ox-=(makslokal -lokal.x);
+    //        lokal.x=(ox%lenlokal)-makslokal;
+    //        global.x=(ox-lokal.x)/lenlokal;
+    //    }if(ox<minlokal){
+    //        ox-=(minlokal -lokal.x);
+    //        lokal.x=(ox%lenlokal)-minlokal;
+    //        global.x=(ox-lokal.x)/lenlokal;
+    //    }
+    //};
 
 

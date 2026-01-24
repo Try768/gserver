@@ -5,9 +5,11 @@
 class Entity{
     friend class registry;
     friend class chunkmap;
-    const EntityData data;
+    EntityData data;
     std::string name;
     Coord<long long> chunk;
+    unsigned char flag;
+    
     Entity(EntityData data,std::string name):data(data),name(name){}
     public:
     inline const Coordinat getCoordinat()const{

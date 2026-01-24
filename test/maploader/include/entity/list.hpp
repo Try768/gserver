@@ -5,10 +5,19 @@
 class EntityData:public Coord_manager_local{
     private:
         //unsigned long long id;
-        IndeksEntityComponent indeks;
         Typein::Component dynamic_property;
+        IndeksEntityComponent indeks;
     public:
-         void ref_dump(std::vector<unsigned char>& keluaran)const{
+        EntityData(EntityData&& dataentity):Coord_manager_local(std::move(dataentity)),
+        dynamic_property(std::move(dataentity.dynamic_property)),
+        indeks(std::move(dataentity.indeks))
+        {}
+        //EntityData& operator=(EntityData&&) = default;
+        constexpr EntityData &EntityData::operator=(const EntityData &)=default;
+        EntityData(const EntityData& dataentity):Coord_manager_local((dataentity)),
+        dynamic_property((dataentity.dynamic_property)),
+        indeks(dataentity.indeks){}
+        void ref_dump(std::vector<unsigned char>& keluaran)const{
             //to_buffer_bigendian<unsigned long long>(indeks.entityType,keluaran);
             this->localdump(keluaran);
             //to_buffer_bigendian<unsigned long long>(component.data.size(),keluaran);
@@ -42,5 +51,8 @@ class EntityData:public Coord_manager_local{
         EntityData()=default;
         auto& getDynamicProperty(std::string key){
             return dynamic_property[key];
+        }
+        auto getIndeks(){
+            return indeks;
         }
 };

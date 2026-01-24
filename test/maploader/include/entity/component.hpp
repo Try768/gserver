@@ -79,6 +79,10 @@ class IndeksEntityComponent{
         if(entityType==nullptr)return false;
         return true;
     }
+    IndeksEntityComponent(const IndeksEntityComponent&) = default;
+    IndeksEntityComponent& operator=(const IndeksEntityComponent&) = default;
+    IndeksEntityComponent(IndeksEntityComponent&&) = default;
+    IndeksEntityComponent& operator=(IndeksEntityComponent&&) = default;
     //this may throw error
     const EntityComponent::Internal& get_id()const{
         #if indebug==1

@@ -9,6 +9,7 @@ class chunkmap:public checksumparent
     public:
     static constexpr unsigned int sizex=16;
     static constexpr unsigned int sizey=16;
+    
     private:
     unsigned char perm_len;
     using ID=unsigned long long;
@@ -66,35 +67,80 @@ class chunkmap:public checksumparent
         }
     };
     //indeks and count
-    IDMaker<ID> entityid;
     IDMaker<unsigned char> tileinchunk;
-    std::unordered_map<std::string,std::pair<unsigned char,unsigned short>> tilelistId;
+    std::unordered_map<std::string,std::pair<unsigned char,unsigned short>> tileCounterId;
     std::unordered_map<unsigned char,std::string> tileId;
     void internal_swap_Tile(const std::string& before,const std::string& after){
-        auto itc =tilelistId.find(before);
-        if(itc!=tilelistId.end()){
-            if(itc->second.second<=0){
+        auto itc =tileCounterId.find(before);
+        if(itc!=tileCounterId.end()){
+            if(itc->second.second==0){
                 tileinchunk.destroyID(itc->second.first);
                 tileId.erase(itc->second.first);
-                tilelistId.erase(before);
+                tileCounterId.erase(before);
             }else{
                 itc->second.second--;
             }
         }
-        itc=tilelistId.find(after);
-        if(itc!=tilelistId.end()){
+        itc=tileCounterId.find(after);
+        if(itc!=tileCounterId.end()){
             itc->second.second++;
         }else{
             unsigned char temid;
             if(!tileinchunk.getID(temid))throw std::exception("some math mistake on tile id");
-            tilelistId[after]=std::pair<unsigned char,unsigned short>(temid,0);
+            tileCounterId[after]=std::pair<unsigned char,unsigned short>(temid,0);
             tileId[temid]=after;
         }
     }
     //indeks and count
-    std::unordered_map<std::string,std::unordered_map<ID,EntityData>> entityBuffer;
+    //static std::unordered_map<std::string,std::unordered_map<ID,EntityData*>> entitybystring;
     std::array<std::pair<TileData,unsigned char>,sizex*sizey> tilesBuffer;
     public:
+    class EntityManager{
+        private:
+        static IDMaker<unsigned long long> entityid;
+        static std::unordered_map<ID,Entity> entitybyID;
+        public:
+        ID addEntity(Entity&& entity){
+            ID tempid;
+            if(!entityid.getID(tempid))throw std::exception("alright alright thats enough entities");
+            const std::string& entityType=entity.get_name();
+            entitybyID.try_emplace(tempid,entity);
+            return tempid;
+        }
+        
+        inline static const Entity& getEntity(ID& entityid){
+            return entitybyID.at(entityid);
+        }
+        inline static decltype(entitybyID)::const_iterator findEntityId(ID identity){
+            return entitybyID.find(identity);
+        }
+        
+        inline static bool setEntity(decltype(entitybyID)::const_iterator itc,Entity&& entity){
+            if(itc==entitybyID.end())return false;
+            auto it= entitybyID.find(itc->first);
+            it->second=entity;
+            return true;
+        };
+        inline static bool setEntity(decltype(entitybyID)::const_iterator itc,const Entity& entity){
+            return setEntity(itc,entity);
+        }
+        inline static bool delEntity(ID id){
+            if(entitybyID.count(id)){
+                entitybyID.erase(id);
+                return true;
+            }return false;
+        }
+        inline ID addEntity(const Entity& entity){
+            addEntity(Entity(entity));
+        }
+        inline std::vector<ID> getentityIDinchunk();
+    };
+    inline void setTile(size_t x,size_t y,const Tile& newTile){
+        if(y>=16||x>=16)return;
+        auto& tile=tilesBuffer[(x)+(y*sizex)];
+        internal_swap_Tile(tileId.at(tile.second),newTile.get_name());
+        tile=std::pair<TileData,unsigned char>(newTile.data,tileCounterId.at(newTile.name).first);
+    }
     bool dirty;
     inline static const std::array<unsigned char,8> chunkSignature ={3,5,7,255,12,34,56,78};
     //can throw error
@@ -102,23 +148,6 @@ class chunkmap:public checksumparent
     inline const Tile getTile(unsigned short x,unsigned short y){
         return Tile(tilesBuffer[x+(y*sizex)].first,tileId.at(tilesBuffer[x*y].second));
     }
-    inline void setTile(size_t x,size_t y,const Tile& newTile){
-        if(y>=16||x>=16)return;
-        auto& tile=tilesBuffer[(x)+(y*sizex)];
-        internal_swap_Tile(tileId.at(tile.second),newTile.get_name());
-        tile=std::pair<TileData,unsigned char>(newTile.data,tilelistId.at(newTile.name).first);
-    }
-    inline ID addEntity(Entity entity){
-        ID tempid;
-        if(!entityid.getID(tempid))throw std::exception("alright alright thats enough entities");
-        entityBuffer[entity.get_name()][tempid]=entity.data;
-        return tempid;
-    }
-    inline Entity getEntity(ID entityid){
-
-    }
-    inline bool setEntity();
-    inline bool delEntity();
     inline const std::unordered_map<unsigned char,std::string>& getAllTypeTile()const{
         return tileId;
     }

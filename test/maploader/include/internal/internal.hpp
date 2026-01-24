@@ -42,6 +42,23 @@ inline unsigned char ceklength(size_t value){
     }
     //if(value<=std::numeric_limits<uint64_t>::max())
 }
+namespace zt{
+    constexpr short lenOfDomain=16;
+    namespace util{
+        inline long long floordiv(long long a, long long b){
+            return (a >= 0) ? (a / b) : -((-a - (b - 1)) / b);
+        }
+        inline long long minOfDomain(long long domain){
+            return domain -(lenOfDomain/2);
+        }
+        inline long long maxOfDomain(long long domain){
+            return domain +(lenOfDomain/2)-1;
+        }
+        inline long long chunkToDomain(long long chunkcoord){
+            return floordiv(chunkcoord, lenOfDomain) * lenOfDomain;
+        }
+    }
+}
 namespace zt::Internal{
     namespace util{
         template<class T>
