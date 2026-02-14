@@ -1,14 +1,25 @@
 #pragma once 
 #include "../../internal/datatype.hpp"
 #include "../../common.hpp"
-class playerlist:public Coord_manager{
+#include "entity/list.hpp"
+class Player;
+class PlayerData:public Coord_manager{
+    friend class Player;
     private:
-    std::string playerName;
-    bool nameAproved;
+    
+    Typein::Component dynamic_property;
+    Var_component_Object runtime_property;
+    velo2 velocity;
+    unsigned char flag;
     public:
+    enum status_flag:unsigned char{
+            is_valid=0b01,
+            is_loaded=0b10,
+            is_name_aproved=0b100
+    };
     static std::unordered_set<std::string> usedPlayername;
     void dump(std::vector<unsigned char>& keluaran){
-        string_short_to_buffer_bigendian(playerName,keluaran);
+        //string_short_to_buffer_bigendian(playerName,keluaran);
         this->co_dump(keluaran);
     }
     static bool is_buffer_valid(const std::vector<unsigned char>& buffer,size_t& offset){
@@ -18,45 +29,25 @@ class playerlist:public Coord_manager{
         if(!Coord_manager::is_co_valid(buffer,offset))return false;
         return true;
     }
+    bool getFlag(PlayerData::status_flag pFlag)const{
+        if(flag&pFlag)return true;return false;
+    }
+    void changeFlag(PlayerData::status_flag pFlag){
+        flag^=pFlag;
+    }
     //this function can throw error
     void parse(const std::vector<unsigned char>& buffer,size_t& offset){
-        buffer_bigendian_to_string_short(buffer,offset,playerName);
-        debug_print("parsed playername:"<<playerName);
+        //buffer_bigendian_to_string_short(buffer,offset,playerName);
+        //debug_print("parsed playername:"<<playerName);
         this->co_parse(buffer,offset);
     }
-    playerlist(const std::vector<unsigned char>& buffer,size_t& offset){
+    PlayerData(const std::vector<unsigned char>& buffer,size_t& offset){
         parse(buffer,offset);
     }
-    playerlist()=default;
-    playerlist(Coord<unsigned int>lokal,
-        Coord<long long> global,std::string name):playerName(name),Coord_manager(global){
-        this->lokal=lokal;
-        
-        this->nameAproved=false;
-    }
-    inline std::string getname()const{
-        return playerName;
-    }
-    bool setnametest(){
-        //std::cout<<this->playerName<<std::endl;
-        if(playerlist::usedPlayername.find(this->playerName)==playerlist::usedPlayername.end()){
-            playerlist::usedPlayername.insert(this->playerName);
-            this->nameAproved=true;
-            return true;
-        }
-        return false;
-    }
-    bool setname(std::string nama){
-       
-        if(playerlist::usedPlayername.find(nama)==playerlist::usedPlayername.end()){
-            if(this->nameAproved){
-                playerlist::usedPlayername.erase(this->playerName);
-            }
-            playerlist::usedPlayername.insert(nama);
-            this->playerName=nama;
-            return true;
-        }
-        return false;
+    PlayerData()=default;
+    PlayerData(Coord<int16_t>lokal,
+        Coord<long long> global):Coord_manager(global,lokal){
+        this->flag&=(~status_flag::is_name_aproved);
     }
 };
-std::unordered_set<std::string> playerlist::usedPlayername={};
+//std::unordered_set<std::string> PlayerData::usedPlayername={};

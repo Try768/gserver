@@ -2,3 +2,9 @@
 class Tile;
 class Entity;
 class Player;
+class EntityComponent;
+class TileComponent;
+class PlayerComponent;
+class SimulatedTile;
+class SimulatedPlayer;
+class SimulatedEntity;

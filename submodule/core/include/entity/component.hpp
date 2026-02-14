@@ -1,7 +1,9 @@
 #pragma once
 #include "../common.hpp"
-#include "internal/component/const.hpp"
+#include "eventListener/eventType.hpp"
+#include "internal/component/var.hpp"
 #include "../internal/datatype.hpp"
+#include <vector>
 #include "../forward.hpp"
 #include <functional>
 #define _MY_LAMBDA_(parameter) [](parameter)
@@ -13,42 +15,56 @@ struct Internal_c{
         {}
         Internal_c()=default;
     };
-
+namespace zt::callback{
+    template<zt::event::entity::Type T>
+    class ComponentRegisterofEntity;
+}
+class IndeksEntityComponent;
 class EntityComponent
 {
 private:
     friend class registry;
     friend class EntityData;
+    friend class Entity;
     friend class chunkmap;
+    friend class IndeksEntityComponent;
+    template<zt::event::entity::Type T>
+    friend class zt::callback::ComponentRegisterofEntity;
     /* data */
     std::string idname;
-    inline static const std::unordered_map<std::string,unsigned char> signed_component={
-        {"nametag",t_type_id::string},
-        {"health",t_type_id::integer},
-    };
     public:
     struct Internal{
-        using optional = zt::Internal::util::optional<Const_component>;
+        using optionalCC = zt::Internal::util::optional<Var_component>;
         friend class registry;
         friend class EntityData;
         friend class chunkmap;
         friend class EntityComponent;
         //std::vector<Internal_c> inComponent;
-        Const_component_Object const_component;
-        optional get(std::string key)const{
-            auto itc=const_component.find(key);
-            if(itc==const_component.end()){
-                return optional(*itc->second);
-            }return optional();
+        using ID=size_t;
+        using RunComponent=std::array<std::vector<ID>,(size_t)zt::event::entity::Type::COUNT>;
+        using optionalRC = zt::Internal::util::optional<RunComponent>;
+        private:
+        RunComponent runComponent;
+        const Var_component_Object var_component;
+        public:
+        optionalCC getCC(std::string key)const{
+            auto itc=var_component.find(key);
+            if(itc==var_component.end()){
+                return optionalCC(*itc->second);
+            }return optionalCC();
+        }
+        const RunComponent& getRC()const{
+           return runComponent;
         }
         private:
-        Internal(Const_component_Object const_component):const_component(const_component)
+        Internal(Var_component_Object const_component,RunComponent runComponent):
+        var_component(const_component),runComponent(runComponent)
         {}
     };
     private:
-    const Internal& internal;
+    Internal& internal;
     EntityComponent(
-        std::string idname,const Internal& CCO):
+        const std::string& idname,Internal& CCO):
         idname(idname),internal(CCO)
         {}
     public:
@@ -57,27 +73,44 @@ private:
     //entitycomponent(/* args */){}
     struct C_entityData{
         const std::string& idname;
-        const Const_component_Object& c_component;
+        const Var_component_Object& c_component;
+        const EntityComponent::Internal::RunComponent& runComponent;
     };
     C_entityData getData()const{
-        return{idname,internal.const_component};
+        return{idname,internal.var_component,internal.runComponent};
     }
     //EntityComponent()=default;
 };
 class IndeksEntityComponent{
+    friend class Entity;
     friend class registry;
     friend class EntityData;
     friend class chunkmap;
     private:
-    const EntityComponent::Internal* entityType;
-    IndeksEntityComponent(const EntityComponent::Internal& component): entityType(&component){}
+    EntityComponent::Internal* entityType;
+    const std::string* idname;
+    IndeksEntityComponent(EntityComponent::Internal& component,const std::string& name):
+     entityType(&component),idname(&name){}
     IndeksEntityComponent(){
         entityType=nullptr;
+        idname=nullptr;
     }
     public:
     bool is_valid()const{
-        if(entityType==nullptr)return false;
+        if(entityType==nullptr||idname==nullptr)return false;
         return true;
+    }
+    const std::string& get_name()const{
+        #if indebug==1
+        if(!is_valid())throw std::exception("belum di cek valid wak");
+        #endif
+        return *idname;
+    }
+    EntityComponent getComponent()const{
+        #if indebug==1
+        if(!is_valid())throw std::exception("belum di cek valid wak");
+        #endif
+        return EntityComponent(*idname,*entityType);
     }
     IndeksEntityComponent(const IndeksEntityComponent&) = default;
     IndeksEntityComponent& operator=(const IndeksEntityComponent&) = default;

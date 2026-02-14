@@ -10,6 +10,7 @@
 #include <iostream>
 #include <unordered_map>
 #include <unordered_set>
+#include <iomanip>
 //constexpr unsigned char chunklen=16;
 namespace t_type_id{
     constexpr unsigned char integer=0x00;
@@ -79,10 +80,14 @@ class CheckSumForStatic{
 };
 class EntityComponent;
 class EntityData;
+class PlayerComponent;
+class PlayerData;
 namespace Typein{
     class Component {
         friend class EntityComponent;
         friend class EntityData;
+        friend class PlayerComponent;
+        friend class PlayerData;
     private:
     Component(std::vector<unsigned char>& buffer,size_t& offset){
         parse(buffer,offset);
@@ -237,13 +242,32 @@ namespace Typein{
 template<typename T>
 struct Coord
 {
+    static_assert(std::is_arithmetic_v<T>,
+              "Coord<T> only supports primitive arithmetic types");
+
     T x;
     T y;
     Coord(T x=0,T y=0):x(x),y(y){}
-    Coord operator+(const Coord& other){
+    Coord operator+(const Coord& other)const{
         return {x+other.x,y+other.y};
     }
 };
+template<typename T>
+inline bool operator==(Coord<T> const& a, Coord<T> const& b) noexcept {
+    return a.x == b.x && a.y == b.y;
+}
+
+namespace std {
+template<class T>
+struct hash<Coord<T>> {
+    size_t operator()(Coord<T> const& p) const noexcept {
+        size_t h = 1469598103934665603ULL;
+        h ^= std::hash<T>{}(p.x); h *= 1099511628211ULL;
+        h ^= std::hash<T>{}(p.y); h *= 1099511628211ULL;
+        return h;
+    }
+};
+}
 struct Coordinat{
     private:
     static constexpr int makslokal =((16/2)*100)-1;
@@ -258,6 +282,8 @@ struct Coordinat{
         return global * lenlokal + (lokal + makslokal);
     }
     public:
+    const Coord<int16_t> getLokal()const noexcept{return lokal;}
+    const Coord<long long> getGlobal()const noexcept{return global;}
     Coordinat(Coord<int16_t> lokal,Coord<long long> global):lokal(lokal),global(global){}
     Coordinat operator+(const Coordinat& other){
         return Coordinat(lokal+other.lokal,global+other.global);
@@ -349,18 +375,108 @@ struct Coordinat{
     }
 
 };
+enum TileSide:unsigned char{
+    None,
+Top,Right,Left,Bottom
+};
+void reflectVelocity(double& vx, double& vy,
+                            TileSide side,
+                            double restitution = 1.0)
+{
+    switch (side) {
+    case TileSide::Left:
+    case TileSide::Right:
+        vx = -vx * restitution;
+        break;
+
+    case TileSide::Top:
+    case TileSide::Bottom:
+        vy = -vy * restitution;
+        break;
+
+    default:
+        break;
+    }
+}
+bool clampDisplacementWithRemainder(
+    double velocity,
+    double dt,
+    double maxDisp,
+    double& outRemainingTime
+) {
+    double disp = velocity * dt;
+
+    if (std::abs(disp) <= maxDisp) {
+        outRemainingTime = 0.0;
+        return false;
+    }
+
+    // waktu sampai mencapai batas
+    double t_hit = maxDisp / std::abs(velocity);
+
+    // sisa waktu
+    outRemainingTime = dt - t_hit;
+    return true;
+}
 
 struct velo2{
+    private:
     double x, y;
-    void addForce(velo2&& force){
+    double friction;
+    public:
+    void addForce(Coord<double>&& force){
         x+=force.x;
         y+=force.y;
     }
-    void apply(double friction,Coordinat& pos,long long deltatime){
+    void addForce(const Coord<double>& force){
+        x+=force.x;
+        y+=force.y;
+    }
+    const Coord<double> getforce()const{
+        return Coord<double>(x,y);
+    }
+    void clearForce(){
+        x=0;y=0;
+    }
+    void setFriction(double friction){
         if(friction<0)friction=0;
-        pos+=Coord(x,y);
-        x-=std::clamp(x,-friction,friction);
-        y-=std::clamp(y,-friction,friction);
+        this->friction=friction;
+    }
+    void apply(Coordinat& pos,double deltatime){
+        pos+=Coord(x*deltatime,y*deltatime);
+        x-=std::clamp(x,-(friction*deltatime),friction*deltatime);
+        y-=std::clamp(y,-(friction*deltatime),friction*deltatime);
+    }
+    //status and remaining dt
+    void apply(Coordinat& pos,
+               double deltatime,
+               double& remaintime,
+               TileSide reflect_side,
+               double xMaks,
+               double yMaks,float restitution=1.0)
+    {
+        // integrate position
+        pos += Coord(
+            std::clamp(x * deltatime, -xMaks, xMaks),
+            std::clamp(y * deltatime, -yMaks, yMaks)
+        );
+        clampDisplacementWithRemainder(x,deltatime,xMaks,remaintime);
+        // reflect velocity if collision
+        if (reflect_side != TileSide::None) {
+            reflectVelocity(x, y, reflect_side,restitution); // 1.0 = elastic
+        }
+    
+        // friction (velocity space)
+        const double f = friction * deltatime;
+        x -= std::clamp(x, -f, f);
+        y -= std::clamp(y, -f, f);
+    }
+
+    void apply(Coordinat& pos,double deltatime,double& remaintime,double xMaks,double yMaks){
+        pos+=Coord(std::clamp(x*deltatime,-xMaks,xMaks),std::clamp(y*deltatime,-yMaks,yMaks));
+        clampDisplacementWithRemainder(x,deltatime,xMaks,remaintime);
+        x-=std::clamp(x,-(friction*deltatime),friction*deltatime);
+        y-=std::clamp(y,-(friction*deltatime),friction*deltatime);
     }
 };
 
@@ -381,6 +497,7 @@ class Coord_manager_local{
         buffer_bigendian_to<int16_t>(buffer,offset,lokal.x);
         buffer_bigendian_to<int16_t>(buffer,offset,lokal.y);
     }
+    Coord_manager_local(const Coord<int16_t>& lokal):lokal(lokal){}
     public:
     inline void setlocalcoord(const Coord<int16_t>& lokal){
             this->lokal=lokal;
@@ -415,9 +532,9 @@ class Coord_manager:public Coord_manager_local{
             buffer_bigendian_to<long long>(buffer,offset,global.x);
             buffer_bigendian_to<long long>(buffer,offset,global.y);
         }
-        Coord_manager(const Coord<long long>& pos):global(pos)
-        {
-        }
+        Coord_manager(const Coord<long long>& pos,
+            const Coord<int16_t>& lokal):global(pos),Coord_manager_local(lokal)
+        {}
     public:
         
         inline const Coord<long long>& getchunkcoord()const{

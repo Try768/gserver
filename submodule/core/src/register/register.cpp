@@ -1,6 +1,6 @@
 #include "register/register.hpp"
 #include "internal/entity/signed_component.hpp"
-std::unordered_map<std::string,playerlist> registry::players={};
+std::unordered_map<std::string,PlayerData> registry::players={};
 std::unordered_map<std::string,tilecomponent::Internal> registry::tiles={};
 std::unordered_map<std::string,EntityComponent::Internal> registry::entities={};
 bool registry::addEntityCustomComponent(bool(*componentFunction)(EntityData&,const Const_component&) ,const std::string& componentName){
@@ -84,7 +84,7 @@ bool registry::check::players(const std::vector<unsigned char>& data,size_t& off
     debug_print("passed dynamic size check:"<<offset);
     for (size_t i = 0; i < arrsize; i++)
     {
-        if(!playerlist::is_buffer_valid(data,offset))return false;
+        if(!PlayerData::is_buffer_valid(data,offset))return false;
     }
     debug_print("passed playerlist check");
 }
@@ -99,7 +99,7 @@ void registry::parsing::players(const std::vector<unsigned char>& data,size_t& o
     debug_print("parsing playerlist count:"<<arrsize);
     for (size_t i = 0; i < arrsize; i++)
     {
-        playerlist temp(data,offset);
+        PlayerData temp(data,offset);
         registry::players[temp.getname()]=temp;
     }
     debug_print("finished parsing playerlist");

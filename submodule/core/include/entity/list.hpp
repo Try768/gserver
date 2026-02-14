@@ -2,25 +2,32 @@
 #include "../common.hpp"
 #include "../internal/datatype.hpp"
 #include "component.hpp"
-class EntityData:public Coord_manager_local{
+#include "node/node.hpp"
+#include "../internal/component/var.hpp"
+class Entity;
+class EntityData:public Coord_manager{
     private:
+        friend class Entity;
+        friend class SimulatedEntity;
         //unsigned long long id;
-        Typein::Component dynamic_property;
+        velo2 velocity;
         IndeksEntityComponent indeks;
+        Var_component_Object runtime_property;
+        //std::string name;
+        Typein::Component dynamic_property;
+        ActionNode* nodeAksi;
+        static enum status_flag:unsigned char{
+            is_valid=0b01,
+            is_loaded=0b10
+        };
+        unsigned char flag;
     public:
-        EntityData(EntityData&& dataentity):Coord_manager_local(std::move(dataentity)),
-        dynamic_property(std::move(dataentity.dynamic_property)),
-        indeks(std::move(dataentity.indeks))
-        {}
-        //EntityData& operator=(EntityData&&) = default;
-        constexpr EntityData &EntityData::operator=(const EntityData &)=default;
-        EntityData(const EntityData& dataentity):Coord_manager_local((dataentity)),
-        dynamic_property((dataentity.dynamic_property)),
-        indeks(dataentity.indeks){}
+        void swap(const IndeksEntityComponent& indeks){
+            this->indeks=indeks;
+        }
+        //const std::string& getname()const noexcept{return name;}
         void ref_dump(std::vector<unsigned char>& keluaran)const{
-            //to_buffer_bigendian<unsigned long long>(indeks.entityType,keluaran);
             this->localdump(keluaran);
-            //to_buffer_bigendian<unsigned long long>(component.data.size(),keluaran);
             dynamic_property.dump(keluaran);
         }
         static bool is_buffer_valid(const std::vector<unsigned char>& buffer,size_t offset){
@@ -41,18 +48,22 @@ class EntityData:public Coord_manager_local{
         EntityData(const std::vector<unsigned char>& buffer,size_t& offset){
             parse(buffer,offset);
         }
-        EntityData(Typein::Component dynamic_property,
-            Coord<unsigned int>lokal,IndeksEntityComponent& indeksentitycomponent
-            ):dynamic_property(dynamic_property)
-        {
-            this->indeks=indeksentitycomponent;
-            this->lokal=lokal;
-        }
+        EntityData(Typein::Component dynamic_property,const Coord<long long>& chunkcoord,
+            const Coord<int16_t>& lokal,IndeksEntityComponent indeks
+            ):dynamic_property(dynamic_property),Coord_manager(chunkcoord,lokal),
+            indeks(indeks)
+        {}
         EntityData()=default;
         auto& getDynamicProperty(std::string key){
             return dynamic_property[key];
         }
-        auto getIndeks(){
-            return indeks;
-        }
 };
+ //EntityData(EntityData&& dataentity):Coord_manager(std::move(dataentity)),
+        //dynamic_property(std::move(dataentity.dynamic_property))
+        //{}
+        ////EntityData& operator=(EntityData&&) = default;
+        //constexpr EntityData &EntityData::operator=(const EntityData &)=default;
+        //EntityData(const EntityData& dataentity):Coord_manager((dataentity)),
+        //dynamic_property((dataentity.dynamic_property)){}
+        //to_buffer_bigendian<unsigned long long>(indeks.entityType,keluaran);
+         //to_buffer_bigendian<unsigned long long>(component.data.size(),keluaran);

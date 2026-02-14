@@ -1,4 +1,25 @@
 #include <chunk/chunk.hpp>
+void chunkmap::internal_swap_Tile(const std::string& before,const std::string& after){
+        auto itc =tileCounterId.find(before);
+        if(itc!=tileCounterId.end()){
+            if(itc->second.second==0){
+                tileinchunk.destroyID(itc->second.first);
+                tileId.erase(itc->second.first);
+                tileCounterId.erase(before);
+            }else{
+                itc->second.second--;
+            }
+        }
+        itc=tileCounterId.find(after);
+        if(itc!=tileCounterId.end()){
+            itc->second.second++;
+        }else{
+            unsigned char temid;
+            if(!tileinchunk.getID(temid))throw std::exception("some math mistake on tile id");
+            tileCounterId[after]=std::pair<unsigned char,unsigned short>(temid,0);
+            tileId[temid]=after;
+        }
+}
 std::vector<unsigned char> chunkmap::dump()const{
         std::vector<unsigned char> buff;
         buff.insert(buff.end(),chunkSignature.begin(),chunkSignature.end());
