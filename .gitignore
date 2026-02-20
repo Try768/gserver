@@ -13,3 +13,5 @@ test/maploader/testmapmain.dat
 test/maploader/main.obj
 test\maploader\internal\component\value.hpp
 submodule/core/build
+submodule/network/include/asio
+dedicated/include/asio

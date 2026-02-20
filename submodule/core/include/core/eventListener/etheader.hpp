@@ -1,0 +1,11 @@
+#pragma once
+#include "core/forward.hpp"
+#include "eventType.hpp"
+#include <unordered_map>
+#include <map>
+#include "internal/idmaker.hpp"
+#include <stdexcept>
+#include "entity/entity.hpp"
+#include "entity/player/player.hpp"
+#include "tile/tile.hpp"
+#include <tuple>

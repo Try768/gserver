@@ -1,2 +1,2 @@
-#include "entity/component.hpp"
-#include "entity/list.hpp"
+#include "core/entity/component.hpp"
+#include "core/entity/list.hpp"

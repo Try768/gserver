@@ -1,4 +1,4 @@
-#include <internal/miniz.h>
+#include "core/internal/miniz.h"
 /**************************************************************************
  *
  * Copyright 2013-2014 RAD Game Tools and Valve Software

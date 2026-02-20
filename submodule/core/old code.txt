@@ -151,3 +151,36 @@ struct Area1d
             parse(buffer,offset,areaget);
         }
     };
+    /*<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+  //  <ClCompile>
+  //    <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+  //    <AdditionalIncludeDirectories>include\</AdditionalIncludeDirectories>
+  //    <ExceptionHandling>Async</ExceptionHandling>
+  //    <PreprocessorDefinitions>
+  //    ASIO_STANDALONE;
+  //    %(PreprocessorDefinitions)
+  //  </PreprocessorDefinitions>
+  //    <PrecompiledHeader>NotUsing</PrecompiledHeader>
+  //  </ClCompile>
+  //  <Link>
+  //  <AdditionalLibraryDirectories>
+  //    $(ProjectDir)lib;
+  //    %(AdditionalLibraryDirectories)
+  //  </AdditionalLibraryDirectories>
+  //  <AdditionalDependencies>
+  //    ws2_32.lib;
+  //    opengl32.lib;
+  //    winmm.lib;
+  //    gdi32.lib;
+  //    user32.lib;
+  //    kernel32.lib;
+  //    raylib.lib;
+  //    %(AdditionalDependencies)
+  //  </AdditionalDependencies>
+  //  <SubSystem>Console</SubSystem>
+  //</Link>
+  //</ItemDefinitionGroup>
+//
+  //<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+<///Project>
+// */

@@ -1,8 +1,8 @@
 #include <caster.h>
 #include <json.hpp>
 //#include "internal/datatype.hpp"
-#include <map/loader.hpp>
-#include <internal/internal.hpp>
+#include "core/map/loader.hpp"
+#include "core/internal/internal.hpp"
 #include <iostream>
 #include <fstream>
 #include <unordered_map>

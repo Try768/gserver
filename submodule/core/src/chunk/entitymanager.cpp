@@ -1,6 +1,6 @@
- #include "chunk/entitymanager.hpp"
- #include "chunk/chunk.hpp"
- #include "eventListener/eventTable.hpp"
+ #include "core/chunk/entitymanager.hpp"
+ #include "core/chunk/chunk.hpp"
+ #include "core/eventListener/eventTable.hpp"
 //EntityManager::ID EntityManager::duplicateEntity(EntityData&& data){
 //    ID tempid;
 //    if(!entityid.getID(tempid))throw std::exception("alright alright thats enough entities");

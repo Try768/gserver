@@ -1,7 +1,7 @@
-#include "entity/entity.hpp"
-#include "register/register.hpp"
-#include "map/loader.hpp"
-#include "eventListener/eventTable.hpp"
+#include "core/entity/entity.hpp"
+#include "core/register/register.hpp"
+#include "core/map/loader.hpp"
+#include "core/eventListener/eventTable.hpp"
 EntityComponent Entity::getEntityComponent(){
         return EntityComponent(this->data.indeks.get_name(),*(this->data.indeks.entityType));
 }

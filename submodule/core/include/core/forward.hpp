@@ -1,0 +1,19 @@
+#pragma once
+class Registry;
+class TileData;
+class EntityData;
+class chunkmap;
+class Entity;
+class Tile;
+class Player;
+class EntityManager;
+class PlayerManager;
+class Room;
+class Dimension;
+class World;
+namespace executionProses{
+    void earlyExecution();
+    void tickExecution();
+    void randomTick();
+    void cleanUpExecution();
+};
