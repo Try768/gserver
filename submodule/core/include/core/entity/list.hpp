@@ -58,6 +58,10 @@ class EntityData:public Coord_manager{
         auto& getDynamicProperty(std::string key){
             return dynamic_property[key];
         }
+        //runtime and dynamic property would not be copy
+        EntityData(const EntityData& enref):Coord_manager(enref),indeks(enref.indeks){
+            
+        }
 };
  //EntityData(EntityData&& dataentity):Coord_manager(std::move(dataentity)),
         //dynamic_property(std::move(dataentity.dynamic_property))

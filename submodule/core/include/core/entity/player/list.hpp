@@ -6,10 +6,13 @@ class Player;
 class PlayerData:public Coord_manager{
     friend class Player;
     private:
-    
+    std::string name;
     Typein::Component dynamic_property;
     Var_component_Object runtime_property;
     velo2 velocity;
+    XUID xuid;
+    std::string name;
+    unsigned long long id;
     unsigned char flag;
     public:
     inline const Var_component_Object& getRuntimeproperty()const{return runtime_property;};
@@ -36,18 +39,34 @@ class PlayerData:public Coord_manager{
     void changeFlag(PlayerData::status_flag pFlag){
         flag^=pFlag;
     }
+    void setname(const std::string& name){
+        flag&=status_flag::is_name_aproved;
+        this->name=name;
+    }
     //this function can throw error
     void parse(const std::vector<unsigned char>& buffer,size_t& offset){
         //buffer_bigendian_to_string_short(buffer,offset,playerName);
         //debug_print("parsed playername:"<<playerName);
+
         this->co_parse(buffer,offset);
     }
+    void parse(const std::vector<unsigned char>& buffer){
+        size_t offset=0;        
+       //buffer_bigendian_to_string_short(buffer,offset,name);
+        //debug_print("parsed playername:"<<playerName);
+        dynamic_property.parse(buffer,offset);
+        this->co_parse(buffer,offset);
+    }
+
     PlayerData(const std::vector<unsigned char>& buffer,size_t& offset){
         parse(buffer,offset);
     }
+    PlayerData(const std::vector<unsigned char>& buffer){
+        parse(buffer);
+    }
     PlayerData()=default;
     PlayerData(Coord<int16_t>lokal,
-        Coord<long long> global):Coord_manager(global,lokal){
+        Coord<long long> global,XUID xuid):Coord_manager(global,lokal),xuid(xuid){
         this->flag&=(~status_flag::is_name_aproved);
     }
 };

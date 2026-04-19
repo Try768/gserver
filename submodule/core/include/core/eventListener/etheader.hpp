@@ -5,7 +5,7 @@
 #include <map>
 #include "internal/idmaker.hpp"
 #include <stdexcept>
-#include "entity/entity.hpp"
-#include "entity/player/player.hpp"
-#include "tile/tile.hpp"
+#include "entity/component.hpp"
+#include "entity/player/component.hpp"
+#include "tile/component.hpp"
 #include <tuple>

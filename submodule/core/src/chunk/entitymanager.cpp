@@ -1,5 +1,10 @@
+#include "core/register/register.hpp"
+#include "core/tile/list.hpp"
+ #include "core/entity/list.hpp"
+ 
  #include "core/chunk/entitymanager.hpp"
  #include "core/chunk/chunk.hpp"
+ #include "world/world.hpp"
  #include "core/eventListener/eventTable.hpp"
 //EntityManager::ID EntityManager::duplicateEntity(EntityData&& data){
 //    ID tempid;
@@ -44,8 +49,9 @@ void EntityManager::cleanUpEvent(Entity& data,
         if(tc.entityInChunk.empty())EntityManager::chunks.erase(chunk);
     }
 }
-void EntityManager::simulate(){
+void EntityManager::simulate(Registry& reg){
     constexpr auto eventtick=zt::event::entity::Type::Tick;
+    const auto& emiter=reg.getEEL();
     for(auto& entitiesinchunk:chunks){
         if(!entitiesinchunk.second.loaded)continue;
         for(auto entityid=entitiesinchunk.second.entityInChunk.begin();
@@ -57,18 +63,16 @@ void EntityManager::simulate(){
             SimulatedEntity simulatedEntity(entity);
             bool emitMainEvent=true;
             //before event
-            zt::callback::beforeEventEntity<eventtick>::emit(
-                {simulatedEntity},emitMainEvent
-            );
+            emiter.getBeforeEvent<eventtick>().emit({simulatedEntity},emitMainEvent);
             //componnent run
             if(emitMainEvent){
-                zt::callback::ComponentRegisterofEntity<eventtick>::emit(
+                emiter.getComponent<eventtick>().emit(
                     {simulatedEntity},entity.getEntityComponent()
                 );
                 
             }
             //after event
-            zt::callback::afterEventEntity<eventtick>::emit(
+            emiter.getAfterEvent<eventtick>().emit(
                 {simulatedEntity}
             );
             cleanUpEvent(simulatedEntity.getEntity(),entitiesinchunk.first);//wip

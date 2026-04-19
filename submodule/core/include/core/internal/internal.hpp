@@ -10,7 +10,18 @@
 #include <algorithm>
 #include <cctype>
 #include "util.hpp"
+#define __my__iterator(x)                                   \
+    using iterator = decltype(x)::iterator;               \
+    using const_iterator = decltype(x)::const_iterator;   \
+    iterator begin() noexcept { return x.begin(); }       \
+    iterator end()   noexcept { return x.end(); }         \
+    const_iterator begin() const noexcept { return x.begin(); } \
+    const_iterator end()   const noexcept { return x.end(); }   \
+    const_iterator cbegin() const noexcept { return x.cbegin(); } \
+    const_iterator cend()   const noexcept { return x.cend(); }
+
 //todo:pisahin fungsi cek dan dumper nya 
+//todo:79 checker
 //okey
 #define indebug 1
 #if indebug==1
@@ -64,61 +75,61 @@ namespace zt{
     }
 }
 namespace zt::Internal{
-    
+    //return 0 if fail
     namespace parse{
+        //return len
         template<class T>
-        inline bool checkPrimitiveBigendian(const std::vector<unsigned char>& buffer,size_t& offset){
+        inline size_t checkPrimitiveBigendian(const std::vector<unsigned char>& buffer,size_t offset){
             if(buffer.size()<sizeof(T)+offset)return false;
-            offset+=sizeof(T);
-            return 1;
+            return sizeof(T)+offset;
         }
-        inline bool checkDynamicBigendian(const std::vector<unsigned char>& buffer,size_t& offset,unsigned char& size){
+        //return len
+        inline size_t checkDynamicBigendian(const std::vector<unsigned char>& buffer,size_t offset,unsigned char& size){
             if((buffer.size())<(1+offset)){
-                return false;
+                return 0;
             }
             size=buffer[offset];
             if(size!=1&&size!=2&&size!=4&&size!=8){
-                return false;
+                return 0;
             }
             if(buffer.size()<size+offset){
-                return false;
-            }   
-            offset+=1;
-
-            return 1;
+                return 0;
+            }
+            return 1+size+offset;
         }
-        //next time
-        bool checkArrayBigendian(const std::vector<unsigned char>& buffer,size_t& offset,size_t& arrlength,unsigned char& btl){
+        //return len
+        size_t checkArrayBigendian(const std::vector<unsigned char>& buffer,size_t offset,size_t& arrlength,unsigned char& btl){
+            
             if(buffer.size()<2+offset){
-                return false;
+                return 0;
             }
             if(buffer[offset]!=((unsigned char)10)){
-                return false;
+                return 0;
             }
             offset++;
             btl=buffer[offset];
             if(btl!=1&&btl!=2&&btl!=4&&btl!=8){
-                return false;
+                return 0;
             }
             offset++;
             if(buffer.size()<btl+offset){
-                return false;
+                return 0;
             }
             arrlength=0;
             for(int i=0;i<btl;++i){
                 arrlength=(arrlength<<8)|buffer[offset];
                 offset++;
             }
-            if(buffer.size()<2+btl+arrlength){
-                return false;
+            if(buffer.size()<2+btl+arrlength+offset){
+                return 0;
             }
-            return true;
+            return offset;
         }
-        inline bool checkArrayBigendian(const std::vector<unsigned char>& buffer,size_t& offset,size_t& arrlength){
+        inline size_t checkArrayBigendian(const std::vector<unsigned char>& buffer,size_t offset,size_t& arrlength){
             unsigned char btl;
             return checkArrayBigendian(buffer,offset,arrlength,btl);
         }
-        inline bool checkStringBigendian(const std::vector<unsigned char>& buffer,size_t& offset,size_t& length){
+        inline size_t checkStringBigendian(const std::vector<unsigned char>& buffer,size_t offset,size_t& length){
             if(buffer.size()<3+offset){
                 return false;
             }
@@ -134,7 +145,25 @@ namespace zt::Internal{
             if(buffer.size()<length+offset){
                 return false;
             }
-            return true;
+            return offset;
+        }
+        inline size_t checkStringBigendian(const std::vector<unsigned char>& buffer,size_t offset){
+            if(buffer.size()<3+offset){
+                return false;
+            }
+            if(buffer[offset] !=(unsigned char) 9){
+                return false;
+            }
+            offset++;
+            size_t length=0;
+            for(int i=1;i<3;++i){
+                length=(length<<8)|buffer[offset];
+                offset++;
+            }
+            if(buffer.size()<length+offset){
+                return false;
+            }
+            return offset;
         }
     }
 }
@@ -315,4 +344,31 @@ public:
     unsigned long long getLong() const { return loongValue; }
     const std::string& getString() const { return strValue; }
     const std::vector<unsigned char>& getArray() const { return arrValue; }
+};
+class Dynamic_Property_Parent{
+    protected:
+    Dynamic_Property_Parent()=default;
+    template<class T>
+    using opt=zt::Internal::util::optionalRef<T>;
+    std::unordered_map<std::string,MultiValue> dynamic_property;
+    public:
+    const opt<const MultiValue> get_dynamic_property(const std::string& key)const{
+        auto itc=dynamic_property.find(key);
+        if(itc!=dynamic_property.end())return opt<const MultiValue>(itc->second);
+        return opt<const MultiValue>();
+    }
+     opt< MultiValue> get_dynamic_property(const std::string& key){
+        auto itc=dynamic_property.find(key);
+        if(itc!=dynamic_property.end())return opt<MultiValue>(itc->second);
+        return opt<MultiValue>();
+    }
+    bool create_dynamic_property(const std::string& key,const MultiValue& value){
+        auto [itc,stat]=dynamic_property.try_emplace(key,value);
+        return stat;
+    }
+    void clear_dynamic_property(const std::string& key){
+        dynamic_property.erase(key);
+    }
+    __my__iterator(dynamic_property)
+
 };

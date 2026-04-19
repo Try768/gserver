@@ -34,7 +34,7 @@ private:
     std::string idname;
     public:
     struct Internal{
-        using optionalCC = zt::Internal::util::optional<Var_component>;
+        using optionalCC = zt::Internal::util::optionalRef<Var_component>;
         friend class Registry;
         friend class EntityData;
         friend class chunkmap;
@@ -42,7 +42,7 @@ private:
         //std::vector<Internal_c> inComponent;
         using ID=size_t;
         using RunComponent=std::array<std::vector<ID>,(size_t)zt::event::entity::Type::COUNT>;
-        using optionalRC = zt::Internal::util::optional<RunComponent>;
+        using optionalRC = zt::Internal::util::optionalRef<RunComponent>;
         private:
         RunComponent runComponent;
         const Var_component_Object var_component;

@@ -10,13 +10,17 @@ class Entity{
     friend class EntityManager;
     friend class SimulatedEntity;
     template<class T>
-    using opt=zt::Internal::util::optional<T>;
+    using opt=zt::Internal::util::optionalRef<T>;
     unsigned long long ID;
+    Dimension& dimension;
     EntityData& data;
-    Entity(EntityData* data,unsigned long long ID):data(*data),ID(ID){
+    Entity(EntityData* data,unsigned long long ID,Dimension& dimension):data(*data),ID(ID),dimension(dimension){
         assert(data != nullptr);
     }
     public:
+    const Dimension& getDimension() const{
+        return dimension;
+    }
     inline const Coordinat getCoordinat()const{
         return Coordinat(data.getlocalcoord(),data.getchunkcoord());
     }
@@ -83,7 +87,7 @@ class SimulatedEntity:public Entity{
     friend class registry;
     friend class chunkmap;
     friend class EntityManager;
-    SimulatedEntity(EntityData* data,unsigned long long ID):Entity(data,ID){
+    SimulatedEntity(EntityData* data,unsigned long long ID,Dimension& dimension):Entity(data,ID,dimension){
     }
     SimulatedEntity(const Entity& data):Entity(data){
     }

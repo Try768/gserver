@@ -5,27 +5,36 @@ struct Area2d{
     private:
     std::unordered_map<Coord<long long>,chunkmap*> chunks;
     public:
-    using optChunkmap =zt::Internal::util::optional<chunkmap>;
-    const optChunkmap& get_const(const Coord<long long>& chunkcoord)const{
+    using optChunkmap =zt::Internal::util::optionalRef<chunkmap>;
+    const optChunkmap get_const(const Coord<long long>& chunkcoord)const{
         auto temp=chunks.find(chunkcoord);
         if(temp!=chunks.end()){
             return optChunkmap(temp->second);
         }
         return optChunkmap();
     }
-    optChunkmap& get(const Coord<long long>& chunkcoord){
+    optChunkmap get(const Coord<long long>& chunkcoord){
         auto temp=chunks.find(chunkcoord);
         if(temp!=chunks.end()){
             return optChunkmap(temp->second);
         }
         return optChunkmap();
     }
-    chunkmap* get_ptr(const Coord<long long>& chunkcoord){
+    chunkmap* _get_ptr(const Coord<long long>& chunkcoord){
         auto temp=chunks.find(chunkcoord);
         if(temp!=chunks.end()){
             return temp->second;
         }
         return nullptr;
+    }
+    my__iterator(chunks)
+    std::vector<optChunkmap> getChunks(Coord<long long> min,Coord<long long> max){
+        std::vector<optChunkmap> lchunks;
+        for(long long x=min.x;x<=max.x;x++)for(long long y=min.y;y<=max.y;y++){
+            auto itc=chunks.find(Coord<long long>(x,y));
+            if(itc!=chunks.end())lchunks.emplace_back(itc->second);
+        };
+        return lchunks;
     }
     inline const bool has_chunk(const Coord<long long>& chunkcoord)const{
         auto temp=chunks.find(chunkcoord);
@@ -49,6 +58,8 @@ struct Area2d{
         }
         return false;
     }
+    Area2d(const Area2d&)=delete;
+    Area2d(Area2d&&)=default;
     Area2d(){
         chunks.reserve(1024);
     }

@@ -64,7 +64,7 @@ class Var_component_Object final:public Var_component{
     using constrParam=Var_component_type::inval<Var_component_type::Type::Object>::type;
     using InternalType=Var_component_type::internal<Var_component_type::Type::Object>::type;
     template<class T>
-    using opt=zt::Internal::util::optional<T>;
+    using opt=zt::Internal::util::optionalRef<T>;
     using iterator = decltype(value)::iterator;
     using const_iterator = decltype(value)::const_iterator;
     iterator begin() noexcept { return value.begin(); }

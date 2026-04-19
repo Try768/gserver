@@ -1,6 +1,5 @@
 #pragma once
 #include "etheader.hpp"
-//Todo : theres an error down there and dont forget about tile component
 namespace zt::callback
 {
     using ptype=zt::event::player::Type;
@@ -13,9 +12,9 @@ namespace zt::callback
         private:
         IDMaker<ID> maker;
         std::vector<std::pair<ID,func>> queueOfEvent;
-        BeforeEventPlayer(){}
         //std::unordered_map<ID,void(*)(zt::event::entity::params<T>&,bool&)> EventbyIterator;
         public:
+        BeforeEventPlayer(){}
         ID EventSubscribe(void(*eventRes)(zt::event::player::params<T>&,bool&)){
             ID id;
             if(!maker.getID(id))throw std::logic_error("what the ... how many event that you made?dude!");
@@ -31,7 +30,7 @@ namespace zt::callback
                 }else ++it;
             }return false;
         }
-        void emit(zt::event::player::params<T>& params,bool& emitdefault){
+        void emit(zt::event::player::params<T> params,bool& emitdefault)const{
             for (size_t i = 0; i < queueOfEvent.size(); ){
                 auto id = queueOfEvent[i].first;
                 auto handler = queueOfEvent[i].second;
@@ -50,9 +49,9 @@ namespace zt::callback
         private:
         IDMaker<ID> maker;
         std::vector<std::pair<ID,void(*)(zt::event::player::params<T>&)>> queueOfEvent;
-        AfterEventPlayer();
         //std::unordered_map<ID,)> EventbyIterator;
         public:
+        AfterEventPlayer(){}
         ID EventSubscribe(void(*eventRes)(zt::event::player::params<T>&)){
             ID id;
             if(!maker.getID(id))throw std::logic_error("what the ... how many event that you made?dude!");
@@ -69,7 +68,7 @@ namespace zt::callback
             }
             return false;
         }
-        void emit(zt::event::player::params<T>& params){
+        void emit(zt::event::player::params<T> params)const{
             for (size_t i = 0; i < queueOfEvent.size(); ){
                 auto id = queueOfEvent[i].first;
                 auto handler = queueOfEvent[i].second;
@@ -96,13 +95,13 @@ namespace zt::callback
         void connect(PlayerComponent& component){
             component.runComponent[T].clear();
             for(const auto& itc :ComponentID){
-                auto iter =component.get_internal_component()->find(itc.first);
-                if(iter!=component.get_internal_component()->end()){
-                    component.runComponent[T].push_back(itc.second);
+                auto iter =component.get_internal_component().find(itc.first);
+                if(iter!=component.get_internal_component().end()){
+                    component.internal.runComponent[T].push_back(itc.second);
                 }
             }
         }
-        void emit(zt::event::player::params<T>& params,const PlayerComponent& component){
+        void emit(zt::event::player::params<T> params,const PlayerComponent& component)const{
             const auto& itc =component.runComponent[T];
             for(auto ind:itc){
                 assert(ind<ComponentByIndeks.size());
@@ -114,6 +113,8 @@ namespace zt::callback
     
     class PlayerEventListener{
         private:
+        friend class Registry;
+        PlayerEventListener(){}
         std::tuple<
             AfterEventPlayer<ptype::invalidData>,AfterEventPlayer<ptype::PlayerConnect>,
             AfterEventPlayer<ptype::PlayerDied>,AfterEventPlayer<ptype::PlayerDisconnect>,
@@ -136,16 +137,30 @@ namespace zt::callback
             ComponentRegisterofPlayer<ptype::PlayerSpawn>,ComponentRegisterofPlayer<ptype::Tick>
         > component;
         public:
-        template<etype T> AfterEventEntity<T> getAfterEvent(){std::get<AfterEventEntity<T>>(afterEvent);}
-        template<etype T> BeforeEventEntity<T> getBeforeEvent(){std::get<AfterEventEntity<T>>(beforEvent);}
-        template<etype T> ComponentRegisterofEntity<T> getComponent(){std::get<ComponentRegisterofEntity<T>>(this->component);}
+        template<ptype T> const AfterEventPlayer<T>& getAfterEvent()const{return std::get<AfterEventPlayer<T>>(afterEvent);}
+        template<ptype T> const BeforeEventPlayer<T>& getBeforeEvent()const{return std::get<BeforeEventPlayer<T>>(beforeEvent);}
+        template<ptype T> const ComponentRegisterofPlayer<T>& getComponent()const{return std::get<ComponentRegisterofPlayer<T>>(this->component);}
     };
     template<zt::event::player::Type T>
-    void entityEmit(zt::event::player::params<T>&& params,PlayerComponent component,PlayerEventListener& listener){
+    void playerEmit(zt::event::player::params<T>&& params,const PlayerComponent& component,const zt::callback::PlayerEventListener& listener){
         bool emitdefault=true;
         listener.getBeforeEvent<T>().emit(params,emitdefault);
         if(emitdefault)listener.getComponent<T>().emit(params,component);
-        listener.getComponent<T>().emit(params);
+        listener.getAfterEvent<T>().emit(params);
+    }
+    template<zt::event::player::Type T>
+    void playerEmit(const zt::event::player::params<T>& params,const PlayerComponent& component,const zt::callback::PlayerEventListener& listener){
+        bool emitdefault=true;
+        listener.getBeforeEvent<T>().emit(params,emitdefault);
+        if(emitdefault)listener.getComponent<T>().emit(params,component);
+        listener.getAfterEvent<T>().emit(params);
+    }
+    void playerConnectEmit(zt::event::player::params<zt::event::player::Type::PlayerConnect> params,
+        const PlayerComponent& component,const zt::callback::PlayerEventListener& listener){
+        bool emitdefault=true;
+        listener.getBeforeEvent<zt::event::player::Type::PlayerConnect>().emit(params,emitdefault);
+        if(emitdefault)listener.getComponent<zt::event::player::Type::PlayerConnect>().emit(params,component);
+        listener.getAfterEvent<zt::event::player::Type::PlayerConnect>().emit(params);
     }
 } // namespace lambda
 /**

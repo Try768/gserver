@@ -2,70 +2,89 @@
 #include "../common.hpp"
 #include "../forward.hpp"
 #include "core/internal/component/var.hpp"
+#include "core/eventListener/eventType.hpp"
 
-class tilecomponent{
+class TileComponent{
     private:
     /* data */
-    static unsigned long long idcount;
-    std::string name;
     public:
     struct Internal{
+        static unsigned long long idcount;
         friend class Registry;
         friend class TileData;
         friend class chunkmap;
-        friend class tilecomponent;
+        friend class TileComponent;
+        friend class ComponentRegisterofTile;
+        std::string name;
+        unsigned char max_permutation;
+        public:
+        using ID=size_t;
+        using RunComponent=std::array<std::vector<ID>,(size_t)zt::event::entity::Type::COUNT>;
+        using optionalRC = zt::Internal::util::optionalRef<RunComponent>;
         private:
-        Internal(bool has_permutation,
-        Var_component_Object&& c_component):has_permutation(has_permutation),
-        c_component(std::move(c_component)){}
+        RunComponent runComponent;
+        unsigned long long id;
+        Internal(
+        Var_component_Object&& c_component,
+        const std::string& name):name(name),
+        c_component(std::move(c_component)){
+            this->id=idcount;
+            idcount++;
+        }
         Internal()=default;
-        bool has_permutation;
+        
         const Var_component_Object c_component;
         public:
-        const auto& is_has_permutation()const {return has_permutation;}
+        unsigned char getMaxPermutation()const noexcept{return max_permutation;}
+        const auto& getRunComponent()const {return runComponent;}
+        auto& getRunComponent() {return runComponent;}
         const auto& get_CCO()const {return c_component;}
     };
     private:
-    const Internal& internal;
-    unsigned long long id;
-    tilecomponent(/* args */)=default;
+    Internal& internal;
+    TileComponent(/* args */)=default;
     friend class registry;
     friend class TileData;
     friend class chunkmap;
-    const Internal& get_internal(){
+    const Internal& get_internal()const{
+        return internal;
+    }
+    Internal& get_internal(){
         return internal;
     }
     public:
     struct C_tileData{
         const std::string& name;
-        const bool& c_size;
-        const unsigned long long id;
+        const unsigned long long& id;
     };
     C_tileData getData()const{
-        return{name,internal.has_permutation,id};
+        return{internal.name,internal.id};
     }
-    tilecomponent(std::string name,const Internal& internal):name(name),internal(internal){
-        this->id=idcount;
-        idcount++;
+    TileComponent(Internal& internal):internal(internal){
+        
     }
 };
 
 class IndeksTileComponent{
     friend class Registry;
     friend class TileData;
+    friend class Tile;
     friend class chunkmap;
     private:
-    const tilecomponent::Internal* TileType;
+    TileComponent::Internal* TileType;
     bool valid;
-    IndeksTileComponent(const tilecomponent::Internal& component):valid(1){
+    IndeksTileComponent(TileComponent::Internal& component):valid(1){
         TileType=&component;
+    }
+    IndeksTileComponent(IndeksTileComponent& indeks):TileType(indeks.TileType),valid(1){
     }
     IndeksTileComponent(const IndeksTileComponent& indeks):TileType(indeks.TileType),valid(1){
     }
     IndeksTileComponent():TileType(0),valid(0){}
     public:
     bool is_valid()const noexcept{return valid;}
-    const tilecomponent::Internal& get()const noexcept{return *TileType;}
+    const TileComponent::Internal& get()const noexcept{return *TileType;}
+    TileComponent::Internal& get() noexcept{return *TileType;}
 };
 //std::vector<unsigned char> dump()const{
     //    std::vector<unsigned char> keluaran;

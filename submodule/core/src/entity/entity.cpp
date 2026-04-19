@@ -2,6 +2,7 @@
 #include "core/register/register.hpp"
 #include "core/map/loader.hpp"
 #include "core/eventListener/eventTable.hpp"
+#include "core/world/world.hpp"
 EntityComponent Entity::getEntityComponent(){
         return EntityComponent(this->data.indeks.get_name(),*(this->data.indeks.entityType));
 }
@@ -22,20 +23,30 @@ void Entity::teleport(Coordinat destination){
 void Entity::jump(double power){
         this->data.velocity.addForce(Coord<double>(0.0,power));
 }
+
 void SimulatedEntity::damageOther(Entity& other,unsigned int damage){
-        zt::callback::entityEmit<zt::event::entity::Type::EntityHit>(
-                {*this,other,damage},this->data.indeks.getComponent()
-        );
+        const auto& eel=dimension.getRoom().getWorld().getRegister().getEEL();
+        constexpr auto eventytpe=zt::event::entity::Type::EntityHit;
+        bool emitdefault=true;
+        eel.getBeforeEvent<eventytpe>().emit({*this,other,damage},emitdefault);
+        if(emitdefault)eel.getComponent<eventytpe>().emit({*this,other,damage},this->getEntityComponent());
+        eel.getAfterEvent<eventytpe>().emit({*this,other,damage});
 }
 void SimulatedEntity::damageOther(Player& other,unsigned int damage){
-        zt::callback::entityEmit<zt::event::entity::Type::EntityHitPlayer>(
-                {*this,other,damage},this->data.indeks.getComponent()
-        );
+        const auto& eel=dimension.getRoom().getWorld().getRegister().getEEL();
+        constexpr auto eventytpe=zt::event::entity::Type::EntityHitPlayer;
+        bool emitdefault=true;
+        eel.getBeforeEvent<eventytpe>().emit({*this,other,damage},emitdefault);
+        if(emitdefault)eel.getComponent<eventytpe>().emit({*this,other,damage},this->getEntityComponent());
+        eel.getAfterEvent<eventytpe>().emit({*this,other,damage});
 }
 void SimulatedEntity::hurt(unsigned int damage,std::string&& reason){
-        zt::callback::entityEmit<zt::event::entity::Type::EntityHurt>(
-                {*this,damage,reason},this->data.indeks.getComponent()
-        );
+        const auto& eel=dimension.getRoom().getWorld().getRegister().getEEL();
+        constexpr auto eventytpe=zt::event::entity::Type::EntityHurt;
+        bool emitdefault=true;
+        eel.getBeforeEvent<eventytpe>().emit({*this,damage,reason},emitdefault);
+        if(emitdefault)eel.getComponent<eventytpe>().emit({*this,damage,reason},this->getEntityComponent());
+        eel.getAfterEvent<eventytpe>().emit({*this,damage,reason});
 }
 
 void Entity::walk(bool direction,double speed){

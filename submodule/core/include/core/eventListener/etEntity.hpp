@@ -2,19 +2,21 @@
 #include "etheader.hpp"
 namespace zt::callback
 {
+    class EntityEventListener;
     using etype=zt::event::entity::Type;
     template<zt::event::entity::Type T>
     class BeforeEventEntity{
         friend class Registry;
+        friend class EntityEventListener;
         public:
         using ID=unsigned long long;
         using func=void(*)(zt::event::entity::params<T>&,bool&);
         private:
         IDMaker<ID> maker;
         std::vector<std::pair<ID,func>> queueOfEvent;
-        BeforeEventEntity(){}
         //std::unordered_map<ID,void(*)(zt::event::entity::params<T>&,bool&)> EventbyIterator;
         public:
+        BeforeEventEntity(){}
         ID EventSubscribe(void(*eventRes)(zt::event::entity::params<T>&,bool&)){
             ID id;
             if(!maker.getID(id))throw std::logic_error("what the ... how many event that you made?dude!");
@@ -30,7 +32,7 @@ namespace zt::callback
                 }else ++it;
             }return false;
         }
-        void emit(zt::event::entity::params<T>& params,bool& emitdefault){
+        void emit(zt::event::entity::params<T>&& params,bool& emitdefault)const{
             for (size_t i = 0; i < queueOfEvent.size(); ){
                 auto id = queueOfEvent[i].first;
                 auto handler = queueOfEvent[i].second;
@@ -44,14 +46,15 @@ namespace zt::callback
     template<zt::event::entity::Type T>
     class AfterEventEntity{
         friend class Registry;
+        friend class EntityEventListener;
         public:
         using ID=unsigned long long;
         private:
         IDMaker<ID> maker;
         std::vector<std::pair<ID,void(*)(zt::event::entity::params<T>&)>> queueOfEvent;
-        AfterEventEntity();
         //std::unordered_map<ID,)> EventbyIterator;
         public:
+        AfterEventEntity()=default;
         ID EventSubscribe(void(*eventRes)(zt::event::entity::params<T>&)){
             ID id;
             if(!maker.getID(id))throw std::logic_error("what the ... how many event that you made?dude!");
@@ -68,7 +71,7 @@ namespace zt::callback
             }
             return false;
         }
-        void emit(zt::event::entity::params<T>& params){
+        void emit(zt::event::entity::params<T>&& params)const{
             for (size_t i = 0; i < queueOfEvent.size(); ){
                 auto id = queueOfEvent[i].first;
                 auto handler = queueOfEvent[i].second;
@@ -80,11 +83,13 @@ namespace zt::callback
     };
     template<zt::event::entity::Type T>
     class ComponentRegisterofEntity{
+        friend class EntityEventListener;
         using Index=size_t;
         Index index;
         std::unordered_map<std::string,Index> ComponentID;
         std::vector<void(*)(zt::event::entity::params<T>&)> ComponentByIndeks;
         public:
+        ComponentRegisterofEntity(){}
         bool registerComponent(std::string ComponentName,void(*eventRes)(zt::event::entity::params<T>&)){
             if(ComponentID.count(ComponentName))return false;
             if(ComponentByIndeks.size()==std::numeric_limits<size_t>::max)throw std::exception("dude how many Component that you wanted to add?!");
@@ -101,18 +106,20 @@ namespace zt::callback
                 }
             }
         }
-        void emit(zt::event::entity::params<T>& params,const EntityComponent& component){
+        void emit(zt::event::entity::params<T>&& params,const EntityComponent& component)const{
             const auto& itc =component.internal.runComponent[T];
             for(auto ind:itc){
                 assert(ind<ComponentByIndeks.size());
                 //if(ind>=ComponentByIndeks.size())throw std::logic_error("hmm i wonder where it come from");
-                ComponentByIndeks[ind](params);
+                (*ComponentByIndeks[ind])(params);
             }
         }
     };
     
     class EntityEventListener{
         private:
+        friend class Registry;
+        EntityEventListener(){}
         std::tuple<
             AfterEventEntity<etype::EntityDied>,AfterEventEntity<etype::EntityHit>,
             AfterEventEntity<etype::EntityHitPlayer>,AfterEventEntity<etype::EntityJump>,
@@ -135,24 +142,16 @@ namespace zt::callback
             ComponentRegisterofEntity<etype::Tick>,ComponentRegisterofEntity<etype::PlayerInteractWithEntity>
         > component;
         public:
-        template<etype T> AfterEventEntity<T> getAfterEvent(){std::get<AfterEventEntity<T>>(afterEvent);}
-        template<etype T> BeforeEventEntity<T> getBeforeEvent(){std::get<AfterEventEntity<T>>(beforEvent);}
-        template<etype T> ComponentRegisterofEntity<T> getComponent(){std::get<ComponentRegisterofEntity<T>>(this->component);}
+
+        template<etype T> const AfterEventEntity<T>& getAfterEvent()const{return std::get<AfterEventEntity<T>>(afterEvent);}
+        template<etype T> const BeforeEventEntity<T>& getBeforeEvent()const{return std::get<BeforeEventEntity<T>>(beforeEvent);}
+        template<etype T> const ComponentRegisterofEntity<T>& getComponent()const{return std::get<ComponentRegisterofEntity<T>>(this->component);}
     };
     template<zt::event::entity::Type T>
-    void entityEmit(zt::event::entity::params<T>&& params,EntityComponent component,EntityEventListener& listener){
+    void entityEmit(zt::event::entity::params<T> params,EntityComponent component,EntityEventListener& listener){
         bool emitdefault=true;
         listener.getBeforeEvent<T>().emit(params,emitdefault);
         if(emitdefault)listener.getComponent<T>().emit(params,component);
-        listener.getComponent<T>().emit(params);
+        listener.getAfterEvent<T>().emit(params);
     }
-} // namespace lambda
-/**
- * auto id = afterEvent.EventSubscribe(
-    [](zt::event::entity::params<T>& p){
-        // do something
-        p.value += 1;
-    }
-);
-
- */
+} 

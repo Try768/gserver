@@ -1,5 +1,6 @@
 #pragma once
 #include "forward.hpp"
+#include "core/internal/util.hpp"
 #include <string>
 #include "playerInput.hpp"
 class EntityComponent;
@@ -15,7 +16,7 @@ namespace zt
     {
         namespace entity
         {
-            enum class Type:unsigned int{
+            enum Type:unsigned int{
                 //register
                 
                 //load data
@@ -60,11 +61,11 @@ namespace zt
         } // namespace Entity
         namespace tile
         {
-            enum class Type:unsigned int{
+            enum Type:unsigned int{
                 //register,
                 //Register,
                 //load data,
-                invalidData,
+                InvalidData,
                 //simulatedPlayer,
                 PlayerInteractWithTile,
                 PlayerStepOn,
@@ -82,10 +83,11 @@ namespace zt
             template<> struct params<Type::EntityStepOn>{Entity& source;Tile& target;};
             template<> struct params<Type::PlayerStepOn>{Player& source;Tile& target;};
             template<> struct params<Type::Tick>{Tile& target;};
+            template<> struct params<Type::InvalidData>{TileData& data;const Registry& reg;};
             template<> struct params<Type::COUNT>{};
         } // namespace Tile
         namespace player{
-            enum class Type:unsigned int{
+            enum Type:unsigned int{
                 //register
                 //Register,
                 //load data
@@ -98,6 +100,7 @@ namespace zt
                 PlayerInput,
                 PlayerDisconnect,
                 PlayerSpawn,
+                PlayerDespawn,
                 PlayerDied,
                 PlayerConnect,
                 Tick,
@@ -108,9 +111,10 @@ namespace zt
             template<> struct params<Type::PlayerHurt>{Player& target;};
             template<> struct params<Type::PlayerInteractWithPlayer>{Player& source;Player& target;};
             template<> struct params<Type::PlayerInput>{SimulatedPlayer& source;zt::input::PlayerInput& input;};
-            template<> struct params<Type::PlayerDisconnect>{Player& source;};
+            template<> struct params<Type::PlayerDisconnect>{const XUID& xuid;};
+            template<> struct params<Type::PlayerSpawn>{Player& source;};
             template<> struct params<Type::PlayerDied>{Player& source;};
-            template<> struct params<Type::PlayerConnect>{Player& source;};
+            template<> struct params<Type::PlayerConnect>{bool& aprove;const XUID& xuid;};
             template<> struct params<Type::COUNT>{};
         } // namespace player
         

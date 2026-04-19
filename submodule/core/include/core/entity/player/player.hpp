@@ -8,13 +8,14 @@ private:
     friend class PlayerManager;
     friend class Registry;
     PlayerData& data;
-    std::string name;
+    unsigned long long id;
+    
     template<class T>
-    using opt=zt::Internal::util::optional<T>;
-    explicit Player(PlayerData& data):data(data){}
+    using opt=zt::Internal::util::optionalRef<T>;
+    explicit Player(PlayerData& data,unsigned long long id):data(data),id(id){}
     public:
     bool is_valid(){return data.getFlag(PlayerData::status_flag::is_valid);}
-    inline const std::string& getname()const{return name;}
+    inline const std::string& getname()const{return data.name;}
     void teleport(Coordinat pos);
     bool tryTeleport(Coordinat pos);
     const velo2& getVelocity();
