@@ -40,7 +40,7 @@ namespace zt
             template<> struct params<Type::EntityHit>{Entity& source;Entity& target;unsigned int damage;};
             template<> struct params<Type::EntityHitPlayer>{Entity& source;Player& target;unsigned int damage;};
             template<> struct params<Type::EntityHurt>{Entity& target;unsigned int damage;const std::string& reason;};
-            template<> struct params<Type::Tick>{SimulatedEntity& entity;};
+            template<> struct params<Type::Tick>{SimulatedEntity& entity;double deltaTime;};
             template<> struct params<Type::PlayerInteractWithEntity>{Player& source;Entity& entity;};
             template<> struct params<Type::EntityWalk>{Entity& entity;};
             template<> struct params<Type::EntityJump>{Entity& entity;};
@@ -49,15 +49,15 @@ namespace zt
             template<> struct params<Type::COUNT>{};
             using playerID=unsigned long long;
             using entityID=unsigned long long;
-            template<Type eventType> struct queueID;
-            template<> struct queueID<Type::PlayerInteractWithEntity>{playerID source;entityID target;};
-            template<> struct queueID<Type::EntityHit>{entityID source;entityID target;unsigned int damage;};
-            template<> struct queueID<Type::EntityHitPlayer>{entityID source;playerID target;unsigned int damage;};
-            template<> struct queueID<Type::EntityHurt>{entityID target;std::string reason;};
-            template<> struct queueID<Type::Tick>{};
-            template<> struct queueID<Type::InvalidData>{};
-            //template<> struct queueID<Type::Register>{};
-            template<> struct queueID<Type::COUNT>{};
+            //template<Type eventType> struct queueID;
+            //template<> struct queueID<Type::PlayerInteractWithEntity>{playerID source;entityID target;};
+            //template<> struct queueID<Type::EntityHit>{entityID source;entityID target;unsigned int damage;};
+            //template<> struct queueID<Type::EntityHitPlayer>{entityID source;playerID target;unsigned int damage;};
+            //template<> struct queueID<Type::EntityHurt>{entityID target;std::string reason;};
+            //template<> struct queueID<Type::Tick>{};
+            //template<> struct queueID<Type::InvalidData>{};
+            ////template<> struct queueID<Type::Register>{};
+            //template<> struct queueID<Type::COUNT>{};
         } // namespace Entity
         namespace tile
         {

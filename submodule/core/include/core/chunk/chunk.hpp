@@ -70,7 +70,7 @@ class chunkmap:public checksumparent
     static size_t is_buffer_valid(const std::vector<unsigned char>& buffer,size_t offset);
     void parse_buffer(const std::vector<unsigned char>& buffer,size_t& offset);
     void parse(const std::vector<unsigned char>& buffer,size_t& offset);
-    chunkmap(const std::vector<unsigned char>& buffer,size_t& offset,Dimension& dimension,Registry reg):dimension(dimension),reg(reg){
+    chunkmap(const std::vector<unsigned char>& buffer,size_t& offset,Dimension& dimension,Registry& reg):dimension(dimension),reg(reg){
         parse(buffer,offset);
     }
     chunkmap(Dimension& dimension,Registry& reg):dimension(dimension),reg(reg){

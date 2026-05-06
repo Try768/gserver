@@ -41,6 +41,15 @@ namespace zt::callback
                     ++i;
             }
         }
+        void emit(zt::event::entity::params<T>& params,bool& emitdefault)const{
+            for (size_t i = 0; i < queueOfEvent.size(); ){
+                auto id = queueOfEvent[i].first;
+                auto handler = queueOfEvent[i].second;
+                handler(params,emitdefault);
+                if (i < queueOfEvent.size() && queueOfEvent[i].first == id)
+                    ++i;
+            }
+        }
     };
     //zt::event::entity::Type::Tick
     template<zt::event::entity::Type T>
@@ -80,6 +89,15 @@ namespace zt::callback
                     ++i;
             }
         }
+        void emit(zt::event::entity::params<T>& params)const{
+            for (size_t i = 0; i < queueOfEvent.size(); ){
+                auto id = queueOfEvent[i].first;
+                auto handler = queueOfEvent[i].second;
+                handler(params);
+                if (i < queueOfEvent.size() && queueOfEvent[i].first == id)
+                    ++i;
+            }
+        }
     };
     template<zt::event::entity::Type T>
     class ComponentRegisterofEntity{
@@ -107,6 +125,14 @@ namespace zt::callback
             }
         }
         void emit(zt::event::entity::params<T>&& params,const EntityComponent& component)const{
+            const auto& itc =component.internal.runComponent[T];
+            for(auto ind:itc){
+                assert(ind<ComponentByIndeks.size());
+                //if(ind>=ComponentByIndeks.size())throw std::logic_error("hmm i wonder where it come from");
+                (*ComponentByIndeks[ind])(params);
+            }
+        }
+        void emit(zt::event::entity::params<T>& params,const EntityComponent& component)const{
             const auto& itc =component.internal.runComponent[T];
             for(auto ind:itc){
                 assert(ind<ComponentByIndeks.size());

@@ -2,15 +2,18 @@
 #include "core/forward.hpp"
 #include "core/internal/internal.hpp"
 #include "core/entity/entity.hpp"
+#include "core/internal/filemanager.hpp"
 #include <deque>
 
 class EntityManager{
         private:
         friend class chunkmap;
         Dimension& dimension;
+        Registry& reg;
         using ID=unsigned long long;
         IDMaker<unsigned long long> entityid;
         std::unordered_map<ID,EntityData*> entitybyID;
+        fsmanager::db::LMDB database;
         public:
         struct ChunkEntity{
             private:
@@ -37,7 +40,6 @@ class EntityManager{
                 return std::vector<ID>(entityInChunk.begin(),entityInChunk.end());
             }
         };
-
         private:
          std::unordered_map<Coord<long long>,ChunkEntity> chunks;
          void cleanUpEvent(Entity& data,const Coord<long long> &chunk);
@@ -55,7 +57,7 @@ class EntityManager{
         inline decltype(entitybyID)::const_iterator findEntityId(ID identity){
             return entitybyID.find(identity);
         }
-        EntityManager(Dimension& dimension):dimension(dimension){}
+        EntityManager(Dimension& dimension,Registry& reg,const std::string& world_dir):dimension(dimension),reg(reg),database(world_dir+"/entity_map",1204*128){}
          bool delEntity(ID id);
          using time_point=std::chrono::steady_clock::time_point;
          void simulate(Registry& reg,time_point time_pivot);

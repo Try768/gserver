@@ -180,7 +180,6 @@ std::vector<unsigned char> chunkmap::dump()const{
             throw std::runtime_error("err:185:permutation len unknown");
                 break;
             }
-            
         }
     }
     void chunkmap::parse(const std::vector<unsigned char>& buffer,size_t& offset){

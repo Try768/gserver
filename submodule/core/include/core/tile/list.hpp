@@ -31,7 +31,7 @@ class TileData{
         bool is_valid()const{
             return indeks.is_valid();
         }
-        
+        inline void setIndeksComponent(IndeksTileComponent indeks){this->indeks=(indeks);}
         //do not use
         static bool is_buffer_valid(const std::vector<unsigned char>& buffer,size_t offset){
             using namespace zt::Internal;

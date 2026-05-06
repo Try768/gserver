@@ -37,6 +37,8 @@ bool EntityManager::delEntity(ID id){
     entitybyID.erase(id);
     return true;
 }
+
+static void impuls(){}
 void EntityManager::cleanUpEvent(Entity& data,
     const Coord<long long> &chunk){
     //applying impuls
@@ -49,7 +51,7 @@ void EntityManager::cleanUpEvent(Entity& data,
         if(tc.entityInChunk.empty())EntityManager::chunks.erase(chunk);
     }
 }
-void EntityManager::simulate(Registry& reg){
+void EntityManager::simulate(Registry& reg,time_point time_pivot){
     constexpr auto eventtick=zt::event::entity::Type::Tick;
     const auto& emiter=reg.getEEL();
     for(auto& entitiesinchunk:chunks){
@@ -62,18 +64,20 @@ void EntityManager::simulate(Registry& reg){
             }
             SimulatedEntity simulatedEntity(entity);
             bool emitMainEvent=true;
+            auto now=std::chrono::steady_clock::now();
+            double deltatime=std::chrono::duration<double,std::milli>(now-time_pivot).count();
+            zt::event::entity::params<eventtick> param{simulatedEntity,deltatime};
             //before event
-            emiter.getBeforeEvent<eventtick>().emit({simulatedEntity},emitMainEvent);
+            emiter.getBeforeEvent<eventtick>().emit(param,emitMainEvent);
             //componnent run
             if(emitMainEvent){
                 emiter.getComponent<eventtick>().emit(
-                    {simulatedEntity},entity.getEntityComponent()
+                    param,entity.getEntityComponent()
                 );
-                
             }
             //after event
             emiter.getAfterEvent<eventtick>().emit(
-                {simulatedEntity}
+                param
             );
             cleanUpEvent(simulatedEntity.getEntity(),entitiesinchunk.first);//wip
             ++entityid;
