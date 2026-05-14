@@ -3,13 +3,15 @@
 #include "core/internal/internal.hpp"
 #include "core/entity/entity.hpp"
 #include "core/internal/filemanager.hpp"
+#include "core/internal/Permision.hpp"
 #include <deque>
 
 class EntityManager{
         private:
         friend class chunkmap;
         Dimension& dimension;
-        Registry& reg;
+        DimensionPermision dimentionpermit;
+        const Registry& reg;
         using ID=unsigned long long;
         IDMaker<unsigned long long> entityid;
         std::unordered_map<ID,EntityData*> entitybyID;
@@ -57,10 +59,13 @@ class EntityManager{
         inline decltype(entitybyID)::const_iterator findEntityId(ID identity){
             return entitybyID.find(identity);
         }
-        EntityManager(Dimension& dimension,Registry& reg,const std::string& world_dir):dimension(dimension),reg(reg),database(world_dir+"/entity_map",1204*128){}
-         bool delEntity(ID id);
-         using time_point=std::chrono::steady_clock::time_point;
-         void simulate(Registry& reg,time_point time_pivot);
+        EntityManager(Dimension& dimension,DimensionPermision permit,const Registry& reg,
+            const std::string& world_dir):dimension(dimension),dimentionpermit(permit),reg(reg),database(world_dir+"/entity_map",1204*128){}
+        EntityManager(Dimension& dimension,DimensionPermision permit,const Registry& reg,
+            std::string&& world_dir):dimension(dimension),dimentionpermit(permit),reg(reg),database(world_dir+"/entity_map",1204*128){}
+        bool delEntity(ID id);
+        using time_point=std::chrono::steady_clock::time_point;
+        void simulate(time_point time_pivot);
 
     };
 //inline static bool setEntity(decltype(entitybyID)::const_iterator itc,Entity&& entity){

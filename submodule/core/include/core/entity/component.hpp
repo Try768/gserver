@@ -19,6 +19,13 @@ namespace zt::callback{
     template<zt::event::entity::Type T>
     class ComponentRegisterofEntity;
 }
+namespace zt{
+    struct Collision{
+        int height;
+        int width;
+        
+    };
+}
 class IndeksEntityComponent;
 class EntityComponent
 {
@@ -34,7 +41,7 @@ private:
     std::string idname;
     public:
     struct Internal{
-        using optionalCC = zt::Internal::util::optionalRef<Var_component>;
+        using optionalCC = zt::Internal::util::OptionalRef<Var_component>;
         friend class Registry;
         friend class EntityData;
         friend class chunkmap;
@@ -42,7 +49,7 @@ private:
         //std::vector<Internal_c> inComponent;
         using ID=size_t;
         using RunComponent=std::array<std::vector<ID>,(size_t)zt::event::entity::Type::COUNT>;
-        using optionalRC = zt::Internal::util::optionalRef<RunComponent>;
+        using optionalRC = zt::Internal::util::OptionalRef<RunComponent>;
         private:
         RunComponent runComponent;
         const Var_component_Object var_component;
@@ -53,6 +60,7 @@ private:
                 return optionalCC(*itc->second);
             }return optionalCC();
         }
+        
         const RunComponent& getRC()const{
            return runComponent;
         }
@@ -89,6 +97,7 @@ class IndeksEntityComponent{
     private:
     EntityComponent::Internal* entityType;
     const std::string* idname;
+    
     IndeksEntityComponent(EntityComponent::Internal& component,const std::string& name):
      entityType(&component),idname(&name){}
     IndeksEntityComponent(){

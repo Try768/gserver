@@ -10,7 +10,7 @@ class Entity{
     friend class EntityManager;
     friend class SimulatedEntity;
     template<class T>
-    using opt=zt::Internal::util::optionalRef<T>;
+    using opt=zt::Internal::util::OptionalRef<T>;
     unsigned long long ID;
     Dimension& dimension;
     EntityData& data;
@@ -24,6 +24,7 @@ class Entity{
     inline const Coordinat getCoordinat()const{
         return Coordinat(data.getlocalcoord(),data.getchunkcoord());
     }
+    zt::Collision getCollision()const{return data.getCollision();}
     //may throw error if not found
     EntityComponent getEntityComponent();
     const long long getMaxHealt()const;
@@ -39,7 +40,8 @@ class Entity{
     
     //relative to entity
     bool applyImpuls(Coord<double> impuls);
-    Coord<int> getVelocity();
+    Coord<long long> getVelocityDiskrit()const;
+    Coord<double> getVelocity()const;
     void clearVelocity();
     void teleport(Coordinat destination);
     void jump(double power);

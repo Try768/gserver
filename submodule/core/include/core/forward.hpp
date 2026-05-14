@@ -10,6 +10,7 @@ class EntityManager;
 class PlayerManager;
 class Room;
 class Dimension;
+class DimensionAccses;
 class World;
 namespace executionProses{
     void earlyExecution();

@@ -4,6 +4,14 @@
 #include <utility>
 #include <cmath>
 #include <vector>
+
+#define __zt__addComparator__inclass(type,equal,lessequal,moreequal,lessthan,morethan,notequal) \
+bool operator==(const type& other){return equal;}\
+bool operator<=(const type& other){return lessequal;}\
+bool operator>=(const type& other){return moreequal;}\
+bool operator<(const type& other){return lessthan;}\
+bool operator>(const type& other){return morethan;}\
+bool operator!=(const type& other){return notequal;}
 template<typename Map, typename Key, typename... Args>
 auto zt_emplace(Map& m, Key&& key, Args&&... args)
 {
@@ -34,13 +42,13 @@ namespace zt{
 }
 namespace zt::util {
 
-    std::vector<std::pair<int, int>> getLine(int x0, int y0, int x1, int y1) {
-        std::vector<std::pair<int, int>> points;
-        int dx = std::abs(x1 - x0);
-        int dy = std::abs(y1 - y0);
-        int sx = (x0 < x1) ? 1 : -1;
-        int sy = (y0 < y1) ? 1 : -1;
-        int err = dx - dy;
+    std::vector<std::pair<long long, long long>> getLine(long long x0, long long y0, long long x1, long long y1) {
+        std::vector<std::pair<long long, long long>> points;
+        long long dx = std::abs(x1 - x0);
+        long long dy = std::abs(y1 - y0);
+        long long sx = (x0 < x1) ? 1 : -1;
+        long long sy = (y0 < y1) ? 1 : -1;
+        long long err = dx - dy;
         while (true) {
             points.emplace_back(x0, y0);
             if (x0 == x1 && y0 == y1)
@@ -58,7 +66,29 @@ namespace zt::util {
         }
         return points;
     }
-    
+    template<class F>
+    void workline(long long x0, long long y0, long long x1, long long y1,F func){
+        long long dx = std::abs(x1 - x0);
+        long long dy = std::abs(y1 - y0);
+        long long sx = (x0 < x1) ? 1 : -1;
+        long long sy = (y0 < y1) ? 1 : -1;
+        long long err = dx - dy;
+        while (true) {
+            if(func(x0,y0))return;
+            if (x0 == x1 && y0 == y1)
+                break;
+
+            int e2 = 2 * err;
+            if (e2 > -dy) {
+                err -= dy;
+                x0 += sx;
+            }
+            if (e2 < dx) {
+                err += dx;
+                y0 += sy;
+            }
+        }
+    }
     namespace convertion{
         long long toFixed(double v) {
         return (long long)std::floor(v * 100.0);
@@ -159,7 +189,38 @@ namespace zt::Internal::util{
         template<> struct getType<4>{using type=unsigned int;};
         template<> struct getType<8>{using type=unsigned long long;};
         template<class T>
-        class optionalRef{
+        class ConstOptionalRef{
+            private:
+            const T* data;
+            public:
+            const bool is_valid()const{
+                if(data==nullptr)return false;
+                return true;
+            }
+            ConstOptionalRef(T& data){
+                this->data=&data;
+            }
+            ConstOptionalRef(T* data){
+                this->data=data;
+            }
+            ConstOptionalRef(const T& data){
+                this->data=&data;
+            }
+            ConstOptionalRef(const T* data){
+                this->data=data;
+            }
+            ConstOptionalRef(){
+                this->data=nullptr;
+            }
+            //may throw error or ub if isnt valid
+            const T* operator->()const{
+                return data;
+            }
+            //may throw error or ub if isnt valid
+            const T& getConst()const{return *data;}
+        };
+        template<class T>
+        class OptionalRef{
             private:
             T* data;
             public:
@@ -167,30 +228,28 @@ namespace zt::Internal::util{
                 if(data==nullptr)return false;
                 return true;
             }
-            optionalRef(T& data){
+            OptionalRef(T& data){
                 this->data=&data;
             }
-            optionalRef(T* data){
+            OptionalRef(T* data){
                 this->data=data;
             }
-            optionalRef(){
+            OptionalRef(){
                 this->data=nullptr;
             }
-            template<class U=T>
-            typename std::enable_if_t<!std::is_const<U>::value,T*>
-             operator->(){
+            operator->(){
                 return data;
             }
             const T* operator->()const{
                 return data;
             }
             //may throw error or ub if isnt valid
-            template<class U=T>
-            typename std::enable_if_t<!std::is_const<U>::value,T&>
             get(){return *data;}
             //may throw error or ub if isnt valid
             const T& getConst()const{return *data;}
         };
+        //template<class U=T>
+        //typename std::enable_if_t<!std::is_const<U>::value,T&>
     }
 struct XUID{
         unsigned long long id1;

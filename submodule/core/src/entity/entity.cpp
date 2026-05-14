@@ -12,9 +12,9 @@ bool Entity::applyImpuls(Coord<double> impuls){
 void Entity::clearVelocity(){
         this->data.velocity.clearForce();
 }
-Coord<int> Entity::getVelocity(){
+Coord<long long> Entity::getVelocityDiskrit()const{
         auto vel=this->data.velocity.getforce();
-        return Coord<int>((int)vel.x,(int)vel.y);
+        return Coord<long long>((long long)ceil(vel.x),(long long)ceil(vel.y));
 }
 void Entity::teleport(Coordinat destination){
         this->data.setchunkcoord(destination.getGlobal());

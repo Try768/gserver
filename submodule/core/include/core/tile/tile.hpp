@@ -11,6 +11,7 @@ class Tile{
     inline const std::string& get_name()const noexcept{return name;}
     inline const unsigned int get_permutation()const noexcept{return data.getpermutation();}
     inline void setpermutation(unsigned int permutation){data.setPermutation(permutation);}
+    bool getCollision()const;
     Tile(TileData& data):data(data){}
 
 };

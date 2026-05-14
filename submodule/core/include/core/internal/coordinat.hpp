@@ -20,7 +20,8 @@ struct Coord
         this->y+other.y;
         return *this;
     }
-
+    bool operator==(const Coord<T>& other)const{return (other.x==this->x) &&(this->y==this->y);}
+    bool operator!=(const Coord<T>& other)const{return !(*this == other);}
 };
 template<typename T>
 inline bool operator==(Coord<T> const& a, Coord<T> const& b) noexcept {
@@ -100,13 +101,48 @@ class Coordinat{
     const Coord<long long> getGlobal()const noexcept{return global;}
     Coordinat(Coord<int16_t> lokal,Coord<long long> global):lokal(lokal),global(global){}
     Coordinat operator+(const Coordinat& other){
-        //to do
         InChunkCoord tmp(lokal);
         auto gs=tmp.add(other.lokal.get());
         auto gl=global+other.global;
         gl.x+=gs.x;
         gl.y+=gs.y;
         return Coordinat(tmp.get(),gl);
+    }
+    Coordinat operator+(Coordinat&& other){
+        InChunkCoord tmp(lokal);
+        auto gs=tmp.add(other.lokal.get());
+        auto gl=global+other.global;
+        gl.x+=gs.x;
+        gl.y+=gs.y;
+        return Coordinat(tmp.get(),gl);
+    }
+    unsigned char getTileX()const{
+        return zt::util::floordiv(lokal.get().x,100)+(16/2);
+    }
+    unsigned char getTileY()const{
+        return zt::util::floordiv(lokal.get().y,100)+(16/2);
+    }
+    bool isXgreaterthan(const Coordinat& other){
+        if(this->global.x>other.global.x)return true;
+        if(this->global.x<other.global.x)return true;
+        if(this->lokal.get().x>other.lokal.get().x)true;
+        return false;
+    }
+    bool isXequal(const Coordinat& other){
+        if(this->global.x==other.global.x)return true;
+        if(this->lokal.get().x==other.lokal.get().x)true;
+        return false;
+    }
+    bool isYequal(const Coordinat& other){
+        if(this->global.y==other.global.y)return true;
+        if(this->lokal.get().y==other.lokal.get().y)true;
+        return false;
+    }
+    bool isYgreaterthan(const Coordinat& other){
+        if(this->global.y>other.global.y)return true;
+        if(this->global.y<other.global.y)return true;
+        if(this->lokal.get().y>other.lokal.get().y)true;
+        return false;
     }
     inline std::string toStringGL(
         const Coord<long long>& global,
@@ -136,6 +172,20 @@ class Coordinat{
         out.global.y+=gs.y;
         return out;
     }
+    Coordinat& operator+=(const Coord<long long>& other) {
+        Coordinat& out = *this;
+        Coord<int> gs= out.lokal.add(other);
+        out.global.x+=gs.x;
+        out.global.y+=gs.y;
+        return out;
+    }
+    Coordinat operator+(const Coord<long long>& other) const {
+        Coordinat out = *this;
+        Coord<int> gs=out.lokal.add(other);
+        out.global.x+=gs.x;
+        out.global.y+=gs.y;
+        return out;
+    }
     inline std::string toStringWorldLazy(
         const Coord<long long>& g,
         const Coord<int16_t>& l
@@ -146,6 +196,13 @@ class Coordinat{
             std::to_string(g.y) + ":" +
             std::to_string(l.y) +
         ")";
+    }
+    inline std::string toStringLong(){
+        std::string x=zt::util::addStr(std::to_string(this->global.x),
+        zt::util::multiplyStr(std::to_string(this->lokal.get().x),1600));
+        std::string y=zt::util::addStr(std::to_string(this->global.y),
+        zt::util::multiplyStr(std::to_string(this->lokal.get().y),1600));
+        return x+y;
     }
     Coordinat operator+(const Coord<double>& other) const {
         Coordinat out = *this;
@@ -178,13 +235,12 @@ void reflectVelocity(double& vx, double& vy,
 }
 bool clampDisplacementWithRemainder(
     double velocity,
-    double dt,
     double maxDisp,
     double& outRemainingTime
 ) {
-    double disp = velocity * dt;
+    double disp = velocity * outRemainingTime;
 
-    if (std::abs(disp) <= maxDisp) {
+    if (std::abs(disp) < maxDisp) {
         outRemainingTime = 0.0;
         return false;
     }
@@ -193,10 +249,12 @@ bool clampDisplacementWithRemainder(
     double t_hit = maxDisp / std::abs(velocity);
 
     // sisa waktu
-    outRemainingTime = dt - t_hit;
+    outRemainingTime -= t_hit;
     return true;
 }
-
+double normVec2(const Coord<double>& vec) {
+    return std::sqrt(vec.x * vec.x + vec.y * vec.y);
+}
 struct velo2{
     private:
     double x, y;
@@ -228,60 +286,62 @@ struct velo2{
     }
     //status and remaining dt
     void apply(Coordinat& pos,
-               double deltatime,
                double& remaintime,
                TileSide reflect_side,
                double xMaks,
                double yMaks,float restitution=1.0)
     {
+        double crt=remaintime;
         // integrate position
+        bool habis=clampDisplacementWithRemainder(normVec2(Coord<double>(x, y)),normVec2(Coord<double>(xMaks, yMaks)),remaintime);
         pos += Coord(
-            std::clamp(x * deltatime, -xMaks, xMaks),
-            std::clamp(y * deltatime, -yMaks, yMaks)
+            std::clamp(x * (crt-remaintime), -xMaks, xMaks),
+            std::clamp(y * (crt-remaintime), -yMaks, yMaks)
         );
-        clampDisplacementWithRemainder(x,deltatime,xMaks,remaintime);
-        // reflect velocity if collision
-        if (reflect_side != TileSide::None) {
-            reflectVelocity(x, y, reflect_side,restitution); // 1.0 = elastic
-        }
-    
-        // friction (velocity space)
-        const double f = friction * deltatime;
+        const double f = friction * (crt-remaintime);
         x -= std::clamp(x, -f, f);
         y -= std::clamp(y, -f, f);
-    }
-    void apply(Coordinat& pos,
-               double deltatime,
-               double& remaintime,
-               double xMaks,
-               double yMaks,float restitution=1.0)
-    {
-        TileSide reflect_side=TileSide::None;
-        // integrate position
-        pos += Coord(
-            std::clamp(x * deltatime, -xMaks, xMaks),
-            std::clamp(y * deltatime, -yMaks, yMaks)
-        );
-        clampDisplacementWithRemainder(x,deltatime,xMaks,remaintime);
         if(remaintime<=0)return;
         // reflect velocity if collision
-        const long long err=round(100*(abs(xMaks)-abs(yMaks)))/100;
-        if(err>0)reflect_side=TileSide::Horizontal;
-        if(err<0)reflect_side=TileSide::Vertical;
-        if (reflect_side != TileSide::None) {
+        if (reflect_side != TileSide::None && !habis) {
             reflectVelocity(x, y, reflect_side,restitution); // 1.0 = elastic
         }
+        
         // friction (velocity space)
-        const double f = friction * deltatime;
-        x -= std::clamp(x, -f, f);
-        y -= std::clamp(y, -f, f);
     }
-
-    void apply(Coordinat& pos,double deltatime,double& remaintime,double xMaks,double yMaks){
-        pos+=Coord(std::clamp(x*deltatime,-xMaks,xMaks),std::clamp(y*deltatime,-yMaks,yMaks));
-        clampDisplacementWithRemainder(x,deltatime,xMaks,remaintime);
-        x-=std::clamp(x,-(friction*deltatime),friction*deltatime);
-        y-=std::clamp(y,-(friction*deltatime),friction*deltatime);
+    void apply(Coordinat& pos,
+        double& remaintime,
+        double xMaks,
+        double yMaks,float restitution=1.0)
+        {
+            TileSide reflect_side=TileSide::None;
+            // integrate position
+            auto crt=remaintime;
+            bool end=clampDisplacementWithRemainder(normVec2(Coord<double>(x, y)),normVec2(Coord<double>(xMaks, yMaks)),remaintime);
+            
+            pos += Coord(
+                std::clamp(x * crt-remaintime, -xMaks, xMaks),
+                std::clamp(y * crt-remaintime, -yMaks, yMaks)
+            );
+            // friction (velocity space)
+            const double f = friction * (crt-remaintime);
+            x -= std::clamp(x, -f, f);
+            y -= std::clamp(y, -f, f);
+            // reflect velocity if collision
+            const long long err=round(100*(abs(xMaks)-abs(yMaks)))/100;
+            if(err>0)reflect_side=TileSide::Horizontal;
+            if(err<0)reflect_side=TileSide::Vertical;
+            if (reflect_side != TileSide::None && !end) {
+                reflectVelocity(x, y, reflect_side,restitution); // 1.0 = elastic
+            }
+        }
+        
+    void apply(Coordinat& pos,double& remaintime,double xMaks,double yMaks){
+            double crt=remaintime;
+        clampDisplacementWithRemainder(normVec2(Coord<double>(x, y)),normVec2(Coord<double>(xMaks, yMaks)),remaintime);
+        pos+=Coord(std::clamp(x*(crt-remaintime),-xMaks,xMaks),std::clamp(y*(crt-remaintime),-yMaks,yMaks));
+        x-=std::clamp(x,-(friction*(crt-remaintime)),friction*(crt-remaintime));
+        y-=std::clamp(y,-(friction*(crt-remaintime)),friction*(crt-remaintime));
     }
     
 };

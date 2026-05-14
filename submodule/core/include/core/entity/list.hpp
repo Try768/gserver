@@ -9,9 +9,11 @@ class EntityData:public Coord_manager{
     private:
         friend class Entity;
         friend class SimulatedEntity;
+        friend class EntityManager;
         //unsigned long long id;
         velo2 velocity;
         IndeksEntityComponent indeks;
+        zt::Collision collision;
         Var_component_Object runtime_property;
         //std::string name;
         Typein::Component dynamic_property;
@@ -21,7 +23,14 @@ class EntityData:public Coord_manager{
             is_loaded=0b10
         };
         unsigned char flag;
-    public:
+        public:
+        void applyVelocity(double remaintime,TileSide reflect_side,
+               double xMaks,
+               double yMaks,float restitution=1.0){
+            Coordinat pos(this->getlocalcoord(),this->getchunkcoord());;
+            velocity.apply(pos, remaintime, reflect_side, xMaks, yMaks, restitution);
+        }
+        inline zt::Collision getCollision()const{return collision;}
         inline const Var_component_Object& getRuntimeproperty()const{return runtime_property;};
         void swap(const IndeksEntityComponent& indeks){
             this->indeks=indeks;

@@ -2,12 +2,14 @@
 #include <chrono>
 #include "../register/register.hpp"
 #include "room.hpp"
+
 class World:public Dynamic_Property_Parent{
     using ID=unsigned long long;
     IDMaker<ID> idmaker;
     std::unordered_map<ID,Room> rooms;
     Registry reg;
     using clock=std::chrono::steady_clock;
+    std::string mainFolder;
     clock::time_point deltaTime;
     void resetClock(){deltaTime =clock::now();}
     public:
@@ -24,7 +26,7 @@ class World:public Dynamic_Property_Parent{
         void (*tileEventAndComponentRegister)(zt::callback::TileEventListener&),
         void (*playerEventAndComponentRegister)(zt::callback::PlayerEventListener&),
         void (*objectRegister)(Registry&),const std::string& ParentDirectory
-    ){
+    ):mainFolder(ParentDirectory){
        entityEventAndComponentRegister(reg.eel);
        tileEventAndComponentRegister(reg.tel);
        playerEventAndComponentRegister(reg.pel);
@@ -41,6 +43,9 @@ class World:public Dynamic_Property_Parent{
         idmaker.destroyID(id);
         auto itc =rooms.find(id);
         if(itc!=rooms.end())rooms.erase(itc);
+    }
+    const std::string& getParentDir()const{
+        return this->mainFolder;
     }
     auto simulate(){
         resetClock();
