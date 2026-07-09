@@ -155,7 +155,7 @@ namespace zt::callback
         if(emitdefault)listener.getComponent<T>().emit(params,component);
         listener.getAfterEvent<T>().emit(params);
     }
-    void playerConnectEmit(zt::event::player::params<zt::event::player::Type::PlayerConnect> params,
+    inline void playerConnectEmit(zt::event::player::params<zt::event::player::Type::PlayerConnect> params,
         const PlayerComponent& component,const zt::callback::PlayerEventListener& listener){
         bool emitdefault=true;
         listener.getBeforeEvent<zt::event::player::Type::PlayerConnect>().emit(params,emitdefault);

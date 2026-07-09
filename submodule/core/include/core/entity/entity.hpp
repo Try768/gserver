@@ -2,7 +2,11 @@
 #include "component.hpp"
 #include "../forward.hpp"
 #include "list.hpp"
+
+//holy shit just do it
 class SimulatedEntity;
+
+
 class Entity{
     protected:
     friend class Registry;
@@ -12,14 +16,21 @@ class Entity{
     template<class T>
     using opt=zt::Internal::util::OptionalRef<T>;
     unsigned long long ID;
-    Dimension& dimension;
+    
+    OriginWorld origin;
     EntityData& data;
-    Entity(EntityData* data,unsigned long long ID,Dimension& dimension):data(*data),ID(ID),dimension(dimension){
+    Entity(EntityData* data,unsigned long long ID,OriginWorld& origin):data(*data),ID(ID),origin(origin){
         assert(data != nullptr);
     }
+    Entity(const Entity& dat):data(dat.data),origin(dat.origin),ID(dat.ID){}
     public:
-    const Dimension& getDimension() const{
-        return dimension;
+    inline bool storeHealt(){
+        if(!data.cache.healt.maxHealt)return false;
+        this->data.dynamic_property["healt"].setLoong(data.cache.healt.healt);
+        return true;
+    }
+    inline const Dimension& getDimension() const{
+        return origin.getDimension();
     }
     inline const Coordinat getCoordinat()const{
         return Coordinat(data.getlocalcoord(),data.getchunkcoord());
@@ -33,7 +44,7 @@ class Entity{
         if(!data.indeks.is_valid())return opt<const std::string>();
         return opt<const std::string>(data.indeks.get_name());
     }
-    bool setHealt(const long long)const;
+    bool setHealt(const long long);
     const bool is_valid(){
         return data.flag&EntityData::status_flag::is_valid;
     }
@@ -89,9 +100,9 @@ class SimulatedEntity:public Entity{
     friend class registry;
     friend class chunkmap;
     friend class EntityManager;
-    SimulatedEntity(EntityData* data,unsigned long long ID,Dimension& dimension):Entity(data,ID,dimension){
-    }
     SimulatedEntity(const Entity& data):Entity(data){
+    }
+    SimulatedEntity(EntityData* data,unsigned long long ID,OriginWorld& origin):Entity(data,ID,origin){
     }
     public:
     Entity& getEntity(){

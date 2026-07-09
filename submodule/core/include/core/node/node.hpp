@@ -15,7 +15,7 @@ class ActionNode{
     Coord<int> value;
     ActionNode* next;
 };
-void deleteActionNode(ActionNode* node){
+inline void deleteActionNode(ActionNode* node){
     auto* it=node;
     ActionNode* tmp;
     while(it!=nullptr){
@@ -35,7 +35,7 @@ class EntityMoveNode{
     private:
     std::queue<InternalEntityMoveNode> internal;
     public:
-    void addMove(double time,Coordinat _akhir,
+    inline void addMove(double time,Coordinat _akhir,
     Coordinat _awal,unsigned int anim_id,unsigned int permutation){
         internal.emplace(InternalEntityMoveNode{time,_akhir,_awal,anim_id,permutation});
     }

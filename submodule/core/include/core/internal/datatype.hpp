@@ -15,6 +15,10 @@
 #include <unordered_set>
 #include <iomanip>
 //constexpr unsigned char chunklen=16;
+struct HealthCache{
+    Var_component_Number* maxHealt=nullptr;
+    long long healt;
+};
 namespace t_type_id{
     constexpr unsigned char integer=0x00;
     constexpr unsigned char string=0x01;

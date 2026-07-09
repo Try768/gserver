@@ -14,11 +14,13 @@ private:
         friend class Registry;
         friend class PlayerComponent;
         friend class ComponentRegisterofPlayer;
-        private:
+        public:
         using ID=size_t;
         using RunComponent=std::array<std::vector<ID>,(size_t)zt::event::player::Type::COUNT>;
-        using optionalRC = zt::Internal::util::optionalRef<RunComponent>;
-        Internal(Var_component_Object&& cco):const_component(std::move(cco)){}
+        using optionalRC = zt::Internal::util::OptionalRef<RunComponent>;
+        private:
+        Internal(Var_component_Object&& cco,RunComponent&& rc):const_component(std::move(cco)),
+        runComponent(std::move(rc)){}
         Var_component_Object const_component;
         RunComponent runComponent;
         public:
@@ -26,13 +28,13 @@ private:
     };
     private:
     Internal* internal;
-    explicit PlayerComponent(const std::string&,Internal& internal):internal(&internal){}
+    explicit PlayerComponent(Internal& internal):internal(&internal){}
     
     public:
     inline static const unsigned long long id=1;
     inline static const std::string_view idname="player";
     template<class T>
-    using optional=zt::Internal::util::optionalRef<T>;
+    using optional=zt::Internal::util::OptionalRef<T>;
     const optional<const Var_component> get_component(const std::string& key)const{
         return optional<const Var_component>(internal->getConstComponent().get(key));
     }

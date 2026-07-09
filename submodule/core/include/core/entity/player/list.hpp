@@ -1,13 +1,18 @@
 #pragma once 
 #include "../../internal/datatype.hpp"
 #include "../../common.hpp"
-#include "entity/list.hpp"
+#include "core/forward.hpp"
+#include "core/entity/list.hpp"
 class Player;
+class SimulatedPlayer;
 class PlayerData:public Coord_manager{
     friend class Player;
+    friend class SimulatedPlayer;
     private:
     std::string name;
+    OriginWorld origin;
     Typein::Component dynamic_property;
+    
     Var_component_Object runtime_property;
     velo2 velocity;
     XUID xuid;
@@ -15,6 +20,8 @@ class PlayerData:public Coord_manager{
     unsigned long long id;
     unsigned char flag;
     public:
+    //friend class zt::ManualObject<Player>;
+    PlayerData(const OriginWorld& origin):origin(origin){};
     inline const Var_component_Object& getRuntimeproperty()const{return runtime_property;};
     enum status_flag:unsigned char{
             is_valid=0b01,
@@ -33,40 +40,36 @@ class PlayerData:public Coord_manager{
         if(!Coord_manager::is_co_valid(buffer,offset))return false;
         return true;
     }
-    bool getFlag(PlayerData::status_flag pFlag)const{
+    inline bool getFlag(PlayerData::status_flag pFlag)const{
         if(flag&pFlag)return true;return false;
     }
-    void changeFlag(PlayerData::status_flag pFlag){
+    inline void changeFlag(PlayerData::status_flag pFlag){
         flag^=pFlag;
     }
-    void setname(const std::string& name){
+    inline void setname(const std::string& name){
         flag&=status_flag::is_name_aproved;
         this->name=name;
     }
     //this function can throw error
-    void parse(const std::vector<unsigned char>& buffer,size_t& offset){
+    inline static  bool parse(zt::ManualObject<PlayerData>& dat,const std::vector<unsigned char>& buffer,size_t& offset){
         //buffer_bigendian_to_string_short(buffer,offset,playerName);
         //debug_print("parsed playername:"<<playerName);
-
-        this->co_parse(buffer,offset);
-    }
-    void parse(const std::vector<unsigned char>& buffer){
-        size_t offset=0;        
-       //buffer_bigendian_to_string_short(buffer,offset,name);
-        //debug_print("parsed playername:"<<playerName);
-        dynamic_property.parse(buffer,offset);
-        this->co_parse(buffer,offset);
+        dat.get()->dynamic_property.parse(buffer,offset);
+        dat.get()->co_parse(buffer,offset);
     }
 
-    PlayerData(const std::vector<unsigned char>& buffer,size_t& offset){
-        parse(buffer,offset);
+    inline static bool deserielise(zt::ManualObject<PlayerData>& dat,const std::vector<unsigned char>& buffer,size_t& offset,Dimension& dim){
+        dat.ctor(dim);
+        parse(dat,buffer,offset);
     }
-    PlayerData(const std::vector<unsigned char>& buffer){
-        parse(buffer);
+    inline static bool deserielise(zt::ManualObject<PlayerData>& dat,const std::vector<unsigned char>& buffer,Dimension& dim){
+        size_t offset=0;
+        dat.ctor(dim);
+        parse(dat,buffer,offset);
     }
-    PlayerData()=default;
-    PlayerData(Coord<int16_t>lokal,
-        Coord<long long> global,XUID xuid):Coord_manager(global,lokal),xuid(xuid){
+    
+    inline PlayerData(Coord<int16_t>lokal,
+        Coord<long long> global,XUID xuid,const OriginWorld& origin):Coord_manager(global,lokal),xuid(xuid),origin(origin){
         this->flag&=(~status_flag::is_name_aproved);
     }
 };

@@ -20,7 +20,7 @@ class TileComponent{
         public:
         using ID=size_t;
         using RunComponent=std::array<std::vector<ID>,(size_t)zt::event::entity::Type::COUNT>;
-        using optionalRC = zt::Internal::util::optionalRef<RunComponent>;
+        using optionalRC = zt::Internal::util::OptionalRef<RunComponent>;
         private:
         RunComponent runComponent;
         unsigned long long id;
@@ -71,9 +71,9 @@ class IndeksTileComponent{
     friend class Tile;
     friend class chunkmap;
     private:
-    TileComponent::Internal* TileType;
+    const TileComponent::Internal* TileType;
     bool valid;
-    IndeksTileComponent(TileComponent::Internal& component):valid(1){
+    IndeksTileComponent(const TileComponent::Internal& component):valid(1){
         TileType=&component;
     }
     IndeksTileComponent(IndeksTileComponent& indeks):TileType(indeks.TileType),valid(1){

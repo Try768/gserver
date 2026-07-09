@@ -13,13 +13,13 @@ namespace fsmanager{
         private:
             MDB_env* env = nullptr;
             MDB_dbi dbi;
-            void check(int rc) {
+            inline void check(int rc) {
                 if (rc != 0)
                     throw std::runtime_error(mdb_strerror(rc));
             }
         
         public:
-            LMDB(const std::string& path, size_t mapsize) {
+            inline LMDB(const std::string& path, size_t mapsize) {
                 check(mdb_env_create(&env));
                 check(mdb_env_set_maxdbs(env, 1));
                 check(mdb_env_set_mapsize(env, mapsize));
@@ -31,12 +31,12 @@ namespace fsmanager{
                 check(mdb_txn_commit(txn));
             }
         
-            ~LMDB() {
+            inline ~LMDB() {
                 mdb_dbi_close(env, dbi);
                 mdb_env_close(env);
             }
             // ---- WRITE ----
-            void __put(const std::string& key,
+            inline void __put(const std::string& key,
                      const void* data_ptr,
                      size_t size)
             {
@@ -55,7 +55,7 @@ namespace fsmanager{
             }
         
             // overload untuk string
-            void put(const std::string& key,
+            inline void put(const std::string& key,
                      const std::string& value)
             {
                 //if(value.size()+_used>_size){
@@ -64,14 +64,14 @@ namespace fsmanager{
                 //}
                 __put(key, value.data(), value.size());
             }
-            void put(const std::string& key,
+            inline void put(const std::string& key,
                      const std::vector<uint8_t>& value)
             {
                 __put(key, value.data(), value.size());
             }
         
             // ---- READ ----
-            std::vector<uint8_t> get(const std::string& key) {
+            inline std::vector<uint8_t> get(const std::string& key) {
                 MDB_txn* txn;
                 check(mdb_txn_begin(env, nullptr, MDB_RDONLY, &txn));
             
@@ -98,7 +98,7 @@ namespace fsmanager{
         };
     }
     namespace file{
-        std::string read(std::string path){
+        inline std::string read(std::string path){
             std::ifstream filer(path);
             if (!filer)
             {
@@ -112,7 +112,7 @@ namespace fsmanager{
             filer.close();
             return buffer;
         }
-        bool write(std::string path, const std::string& data){
+        inline bool write(std::string path, const std::string& data){
             std::ofstream filer(path);
             if (!filer)
             {
@@ -122,7 +122,7 @@ namespace fsmanager{
             filer.close();
             return true;
         }
-        std::vector<unsigned char> readbin(std::string path){
+        inline std::vector<unsigned char> readbin(std::string path){
             std::vector<unsigned char> buffer;
             std::ifstream filer(path,std::ios::binary);
             if (!filer)
@@ -135,7 +135,7 @@ namespace fsmanager{
             filer.read(reinterpret_cast<char*>(buffer.data()), buffer.size());
             return buffer;
         }
-        bool writebin(std::string path, const std::vector<unsigned char>& data){
+        inline bool writebin(std::string path, const std::vector<unsigned char>& data){
             std::ofstream filer(path, std::ios::binary);
             if (!filer)
             {
@@ -144,10 +144,10 @@ namespace fsmanager{
             filer.write(reinterpret_cast<const char*>(data.data()), data.size());
             return true;
         }
-        bool exists(std::string path){
+        inline bool exists(std::string path){
             return std::filesystem::exists(path)&& !std::filesystem::is_directory(path);
         }
-        bool remove(std::string path){
+        inline bool remove(std::string path){
             return std::filesystem::remove(path);
         }
     }

@@ -12,6 +12,15 @@ bool Entity::applyImpuls(Coord<double> impuls){
 void Entity::clearVelocity(){
         this->data.velocity.clearForce();
 }
+bool Entity::setHealt(long long nhealt){
+        auto it=this->data.runtime_property.find("maxHealt");
+        if(it==this->data.runtime_property.end())return false;
+        if(nhealt<0)nhealt=0;
+        //tipe data harus di cek saat start up awal
+        long long maxh=it->second->getCast<Var_component_type::Type::Number>()->get();
+        if(nhealt>maxh)nhealt=maxh;
+        this->data.dynamic_property.data["healt"].setLoong(nhealt);
+}
 Coord<long long> Entity::getVelocityDiskrit()const{
         auto vel=this->data.velocity.getforce();
         return Coord<long long>((long long)ceil(vel.x),(long long)ceil(vel.y));
@@ -25,15 +34,17 @@ void Entity::jump(double power){
 }
 
 void SimulatedEntity::damageOther(Entity& other,unsigned int damage){
-        const auto& eel=dimension.getRoom().getWorld().getRegister().getEEL();
+        const auto& eel=origin.getWorld().getRegister().getEEL();
         constexpr auto eventytpe=zt::event::entity::Type::EntityHit;
         bool emitdefault=true;
         eel.getBeforeEvent<eventytpe>().emit({*this,other,damage},emitdefault);
-        if(emitdefault)eel.getComponent<eventytpe>().emit({*this,other,damage},this->getEntityComponent());
+        if(emitdefault){
+                eel.getComponent<eventytpe>().emit({*this,other,damage},this->getEntityComponent());
+        }
         eel.getAfterEvent<eventytpe>().emit({*this,other,damage});
 }
 void SimulatedEntity::damageOther(Player& other,unsigned int damage){
-        const auto& eel=dimension.getRoom().getWorld().getRegister().getEEL();
+        const auto& eel=origin.getWorld().getRegister().getEEL();
         constexpr auto eventytpe=zt::event::entity::Type::EntityHitPlayer;
         bool emitdefault=true;
         eel.getBeforeEvent<eventytpe>().emit({*this,other,damage},emitdefault);
@@ -41,7 +52,7 @@ void SimulatedEntity::damageOther(Player& other,unsigned int damage){
         eel.getAfterEvent<eventytpe>().emit({*this,other,damage});
 }
 void SimulatedEntity::hurt(unsigned int damage,std::string&& reason){
-        const auto& eel=dimension.getRoom().getWorld().getRegister().getEEL();
+        const auto& eel=origin.getWorld().getRegister().getEEL();
         constexpr auto eventytpe=zt::event::entity::Type::EntityHurt;
         bool emitdefault=true;
         eel.getBeforeEvent<eventytpe>().emit({*this,damage,reason},emitdefault);

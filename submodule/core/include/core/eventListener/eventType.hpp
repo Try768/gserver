@@ -94,6 +94,7 @@ namespace zt
                 invalidData,
                 //simulatedPlayer
                 PlayerHitEntity,
+                PlayerHitPlayer,
                 PlayerHurt,
                 PlayerInteractWithPlayer,
                 //PlayerManager
@@ -107,7 +108,8 @@ namespace zt
                 COUNT
             };
             template<Type eventType> struct params;
-            template<> struct params<Type::PlayerHitEntity>{Player& source;Entity& target;};
+            template<> struct params<Type::PlayerHitEntity>{Player& source;Entity& target;unsigned int damage=0;};
+            template<> struct params<Type::PlayerHitPlayer>{Player& source;Player& target;unsigned int damage=0;};
             template<> struct params<Type::PlayerHurt>{Player& target;};
             template<> struct params<Type::PlayerInteractWithPlayer>{Player& source;Player& target;};
             template<> struct params<Type::PlayerInput>{SimulatedPlayer& source;zt::input::PlayerInput& input;};
@@ -115,6 +117,7 @@ namespace zt
             template<> struct params<Type::PlayerSpawn>{Player& source;};
             template<> struct params<Type::PlayerDied>{Player& source;};
             template<> struct params<Type::PlayerConnect>{bool& aprove;const XUID& xuid;};
+            template<> struct params<Type::Tick>{SimulatedPlayer& source;};
             template<> struct params<Type::COUNT>{};
         } // namespace player
         

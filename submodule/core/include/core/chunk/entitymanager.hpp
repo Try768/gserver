@@ -7,7 +7,7 @@
 #include <deque>
 
 class EntityManager{
-        private:
+    private:
         friend class chunkmap;
         Dimension& dimension;
         DimensionPermision dimentionpermit;
@@ -16,7 +16,7 @@ class EntityManager{
         IDMaker<unsigned long long> entityid;
         std::unordered_map<ID,EntityData*> entitybyID;
         fsmanager::db::LMDB database;
-        public:
+    public:
         struct ChunkEntity{
             private:
             friend class EntityManager;
@@ -67,7 +67,7 @@ class EntityManager{
         using time_point=std::chrono::steady_clock::time_point;
         void simulate(time_point time_pivot);
 
-    };
+};
 //inline static bool setEntity(decltype(entitybyID)::const_iterator itc,Entity&& entity){
         //    if(itc==entitybyID.end())return false;
         //    auto it= entitybyID.find(itc->first);

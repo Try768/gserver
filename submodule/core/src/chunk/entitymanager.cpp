@@ -1,7 +1,7 @@
 #include "core/register/register.hpp"
 #include "core/tile/list.hpp"
  #include "core/entity/list.hpp"
- 
+ #include "shared/Client/EntityMove.hpp"
  #include "core/chunk/entitymanager.hpp"
  #include "core/chunk/chunk.hpp"
  #include "world/world.hpp"
@@ -46,7 +46,7 @@ double calclinear(Coord<double> vec,double x,double maksVal=2){
     return std::clamp(std::clamp(x*gradien,-vec.y,vec.y), -maksVal, maksVal);
 }
 std::optional<Coord<double>> getmaksCanGo(Dimension& dim,Coordinat potition,
-    int dirX,int dirY,Coord<long long> next,velo2 vel,zt::Collision colision){
+    int dirX,int dirY,Coord<long long> next,velo2 vel,zt::Collision colision,TileSide& hit_side){
     
     auto getTileSolid=[&](Coordinat coord)->bool{
         return dim.getTile(coord).getCollision();
@@ -73,11 +73,13 @@ std::optional<Coord<double>> getmaksCanGo(Dimension& dim,Coordinat potition,
         if(correctionX==0)return std::nullopt;
         double kalkulasiX=calclinear(vel.getforce(),correctionX);
         if(kalkulasiX>1||kalkulasiX<-1)return std::nullopt;
+        hit_side= TileSide::Horizontal;
         return Coord<double>{((colision.width/2)*dirX)+correctionX,kalkulasiX};
     }else if(drc==2||drc==-2){
         if(correctionY==0)return std::nullopt;
         double kalkulasiY=calclinear(Coord<double>(vel.getforce().y,vel.getforce().x),correctionY);
         if(kalkulasiY>1||kalkulasiY<-1)return std::nullopt;
+        hit_side= TileSide::Vertical;
         return Coord<double>{kalkulasiY,((colision.height/2)*dirY)+correctionY};
     }
     return std::nullopt;
@@ -146,40 +148,47 @@ bool collideRight(entity, nextX)
     return false;
 }
 */
-static void impuls(){}
+
 void EntityManager::cleanUpEvent(Entity& data,
     const Coord<long long> &chunk){
     //applying impuls
+    EntityMoveSnapshot snapshot;
+    snapshot.id=data.ID;
     auto perpindahan=data.getVelocityDiskrit();
     Coord<long long> last_chunk;
     zt::Collision colision=data.getCollision();
-    bool first=true,loaded=false;
-    long long bx=0,by=0;
-    velo2 vel=data.data.velocity;
-    Coord<double> maksgoto{0,0};
-    zt::util::workline(0,0,perpindahan.x,perpindahan.y,[&](long long x,long long y){
-        Coord<long long> chunkPosi{
-            zt::util::floordiv(x,16)+chunk.x,
-            zt::util::floordiv(y,16)+chunk.y
-        };
-
-        if((chunkPosi != last_chunk)&&(!first)){
-            loaded = this->dimension.isChunkLoaded(chunkPosi);
-            last_chunk = chunkPosi;
-        }
-        if(!(loaded)){maksgoto=Coord<double>{x,y};return true;}
-        int dirX=(x>bx)-(x<bx);
-        int dirY=(y>by)-(y<by);
-        //getMaksCanGo();
-        if(auto maksCanGo=getmaksCanGo(dimension,data.getCoordinat()+Coord<long long>{x,y},dirX,dirY,Coord<long long>{x,y},vel,colision)){
-            maksgoto=*maksCanGo;
-            return true;
-        }
-        vel.addForce(Coord<double>{-dirX,-dirY});
-        return false;
-    });
-    //lets gooooo todo:add remain time and loop to apply velocity until it can be applied no more
-    data.data.applyVelocity(0,TileSide::None,0,0);
+    double remainTime=1;
+    while(remainTime>0.0){
+        bool first=true,loaded=false;
+        TileSide sideHit=TileSide::None;
+        long long bx=0,by=0;
+        velo2 vel=data.data.velocity;
+        Coord<double> maksgoto{0,0};
+        zt::util::workline(0,0,perpindahan.x,perpindahan.y,[&](long long x,long long y){
+            Coord<long long> chunkPosi{
+                zt::util::floordiv(x,16)+chunk.x,
+                zt::util::floordiv(y,16)+chunk.y
+            };
+            if((chunkPosi != last_chunk)&&(!first)){
+                loaded = this->dimension.isChunkLoaded(chunkPosi);
+                last_chunk = chunkPosi;
+            }
+            if(!(loaded)){maksgoto=Coord<double>{x,y};return true;}
+            int dirX=(x>bx)-(x<bx);
+            int dirY=(y>by)-(y<by);
+            if(auto maksCanGo=getmaksCanGo(dimension,data.getCoordinat()+Coord<long long>{x,y},
+            dirX,dirY,Coord<long long>{x,y},vel,colision,sideHit)){
+                maksgoto=*maksCanGo;
+             
+                return true;
+            }
+            vel.addForce(Coord<double>{-dirX,-dirY});
+            return false;
+        });
+        //lets gooooo todo:add remain time and loop to apply velocity until it can be applied no more
+        data.data.applyVelocity(remainTime,sideHit,maksgoto.x,maksgoto.y,0.1,snapshot);
+        Client::sendEntityMove(snapshot);
+    }
         // chunk correction
     if((data.getCoordinat().getGlobal().x!=chunk.x)||(data.getCoordinat().getGlobal().y!=chunk.y)){
         EntityManager::chunks[data.getCoordinat().getGlobal()].entityInChunk.emplace(data.ID);
@@ -213,6 +222,7 @@ void EntityManager::simulate(time_point time_pivot){
                 );
             }
             //after event
+            
             emiter.getAfterEvent<eventtick>().emit(
                 param
             );

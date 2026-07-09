@@ -1,28 +1,29 @@
-#include "entity/player/component.hpp"
-#include "entity/player/list.hpp"
-#include "eventListener/playerInput.hpp"
+#include "core/entity/player/component.hpp"
+#include "core/entity/player/list.hpp"
+#include "core/eventListener/playerInput.hpp"
 class PlayerManager;
 class Player
 {
 private:
     friend class PlayerManager;
     friend class Registry;
+    protected:
     PlayerData& data;
     unsigned long long id;
     
     template<class T>
-    using opt=zt::Internal::util::optionalRef<T>;
+    using opt=zt::Internal::util::OptionalRef<T>;
     explicit Player(PlayerData& data,unsigned long long id):data(data),id(id){}
     public:
     bool is_valid(){return data.getFlag(PlayerData::status_flag::is_valid);}
     inline const std::string& getname()const{return data.name;}
     void teleport(Coordinat pos);
-    bool tryTeleport(Coordinat pos);
+    void teleport(Coordinat pos,Dimension& dim);
     const velo2& getVelocity();
     void clearVelocity();
     void applyImpuls(Coord<double> impuls);
     
-    void setDynamicProperty(const std::string& key,const MultiValue& value){
+    inline void setDynamicProperty(const std::string& key,const MultiValue& value){
         data.dynamic_property.data[key]=value;
     }
     bool clearDynamicProperty(const std::string& key){
@@ -71,6 +72,7 @@ class SimulatedPlayer:public Player{
     void breakTile(Tile& tile);
     //calling an event
     void hurt(unsigned int damage);
+    void hurt(unsigned int damage,const std::string& reason);
     //calling an event
     void PlayerInteractWithPlayer(Player& target);
     //calling an event

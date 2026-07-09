@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <string>
 #include "util.hpp"
+#include "shared/Client/EntityMove.hpp"
 template<typename T>
 struct Coord
 {
@@ -279,25 +280,29 @@ struct velo2{
         if(friction<0)friction=0;
         this->friction=friction;
     }
-    void apply(Coordinat& pos,double deltatime){
+    inline void apply(Coordinat& pos,double deltatime){
         pos+=Coord(x*deltatime,y*deltatime);
         x-=std::clamp(x,-(friction*deltatime),friction*deltatime);
         y-=std::clamp(y,-(friction*deltatime),friction*deltatime);
     }
     //status and remaining dt
-    void apply(Coordinat& pos,
+    inline void apply(Coordinat& pos,
                double& remaintime,
                TileSide reflect_side,
                double xMaks,
-               double yMaks,float restitution=1.0)
+               double yMaks,float restitution=1.0,EntityMoveSnapshot& snapshot)
     {
         double crt=remaintime;
         // integrate position
         bool habis=clampDisplacementWithRemainder(normVec2(Coord<double>(x, y)),normVec2(Coord<double>(xMaks, yMaks)),remaintime);
-        pos += Coord(
+        auto deltapos= Coord(
             std::clamp(x * (crt-remaintime), -xMaks, xMaks),
             std::clamp(y * (crt-remaintime), -yMaks, yMaks)
         );
+        snapshot.x=deltapos.x;
+        snapshot.y=deltapos.y;
+        snapshot.time=(crt-remaintime);
+        pos+=deltapos;
         const double f = friction * (crt-remaintime);
         x -= std::clamp(x, -f, f);
         y -= std::clamp(y, -f, f);
@@ -398,6 +403,12 @@ class Coord_manager:public Coord_manager_local{
             this->localCoorParse(buffer,offset);
             buffer_bigendian_to<long long>(buffer,offset,global.x);
             buffer_bigendian_to<long long>(buffer,offset,global.y);
+        }
+        Coord_manager& set_Coordinat(const Coordinat& other){
+            this->global.x=other.getGlobal().x;
+            this->global.y=other.getGlobal().y;
+            this->lokal.x=other.getLokal().x;
+            this->lokal.y=other.getLokal().y;
         }
         Coord_manager(const Coord<long long>& pos,
             const Coord<int16_t>& lokal):global(pos),Coord_manager_local(lokal)

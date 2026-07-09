@@ -32,7 +32,7 @@ class World:public Dynamic_Property_Parent{
        playerEventAndComponentRegister(reg.pel);
        objectRegister(reg);
     }
-    const Registry getRegister()const{return reg;}
+    inline const Registry& getRegister()const{return reg;}
     ID createRoom(std::vector<std::pair<std::string,std::unique_ptr<Dimension>>> dimensions,
         World& world,bool is_admin=false){
         ID id;

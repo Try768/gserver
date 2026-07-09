@@ -57,7 +57,24 @@ inline unsigned char ceklength(size_t value){
     }
     //if(value<=std::numeric_limits<uint64_t>::max())
 }
-
+namespace zt{
+    template<class T>
+    class ManualObject{
+        private:
+        alignas(T) unsigned char storage[sizeof(T)];
+        public:
+        template<typename... Args>
+        T* ctor(Args&&... args){
+            return new (storage) T(std::forward<Args>(args)...);
+        }
+        void dtor(){
+            reinterpret_cast<T*>(storage)->~T();
+        }
+        T& operator*(){return *reinterpret_cast<T*>(storage);}
+        T* get(){return reinterpret_cast<T*>(storage);}
+        const T* get()const {return reinterpret_cast<const T*>(storage);}
+    };
+}
 namespace zt::Internal{
     //return 0 if fail
     namespace parse{
@@ -258,7 +275,7 @@ inline void buffer_bigendian_to_array(const std::vector<unsigned char>& buffer,s
 }
 class MultiValue {
 public:
-    enum class Type:unsigned char { Integer, String, Boolean, Loong, Character, Array, None };
+    enum class Type:unsigned char {Integer, String, Boolean, Loong, Character, Array, None };
 
 private:
     Type type = Type::None;
@@ -266,7 +283,7 @@ private:
         unsigned int intValue;
         bool boolValue;
         unsigned char charValue;
-        unsigned long long loongValue;
+        long long loongValue;
     };
     std::string strValue;
     std::vector<unsigned char> arrValue;
@@ -275,7 +292,7 @@ public:
     bool setInt(unsigned int v) { if(type != Type::Integer) return false; intValue = v; return true; }
     bool setBool(bool v) { if(type != Type::Boolean) return false; boolValue = v; return true; }
     bool setChar(unsigned char v) { if(type != Type::Character) return false; charValue = v; return true; }
-    bool setLoong(unsigned long long v) { if(type != Type::Loong) return false; loongValue = v; return true; }
+    bool setLoong(long long v) { if(type != Type::Loong) return false; loongValue = v; return true; }
     bool setString(const std::string& v) { if(type != Type::String) return false; strValue = v; return true; }
     bool setArray(const std::vector<unsigned char>& v) { if(type != Type::Array) return false; arrValue = v; return true; }
     MultiValue() : type(Type::None) {}
@@ -325,7 +342,7 @@ public:
     unsigned int getInt() const { return intValue; }
     bool getBool() const { return boolValue; }
     unsigned char getChar() const { return charValue; }
-    unsigned long long getLong() const { return loongValue; }
+    long long getLong() const { return loongValue; }
     const std::string& getString() const { return strValue; }
     const std::vector<unsigned char>& getArray() const { return arrValue; }
 };
@@ -333,7 +350,7 @@ class Dynamic_Property_Parent{
     protected:
     Dynamic_Property_Parent()=default;
     template<class T>
-    using opt=zt::Internal::util::optionalRef<T>;
+    using opt=zt::Internal::util::OptionalRef<T>;
     std::unordered_map<std::string,MultiValue> dynamic_property;
     public:
     const opt<const MultiValue> get_dynamic_property(const std::string& key)const{

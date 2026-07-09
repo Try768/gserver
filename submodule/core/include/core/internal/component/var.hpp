@@ -26,7 +26,7 @@ class Var_component_Number final:public Var_component{
     private:
     typename inval<cct::Number> value;
     public:
-    const inval<cct::Number>& get()const{return value;}
+    const inline inval<cct::Number>& get()const{return value;}
     inval<cct::Number>& get(){return value;}
     explicit Var_component_Number(params<cct::Number> value):value(value),Var_component(cct::Number){}
     inline const static cct type=cct::Number;
@@ -64,7 +64,7 @@ class Var_component_Object final:public Var_component{
     using constrParam=Var_component_type::inval<Var_component_type::Type::Object>::type;
     using InternalType=Var_component_type::internal<Var_component_type::Type::Object>::type;
     template<class T>
-    using opt=zt::Internal::util::optionalRef<T>;
+    using opt=zt::Internal::util::OptionalRef<T>;
     using iterator = decltype(value)::iterator;
     using const_iterator = decltype(value)::const_iterator;
     iterator begin() noexcept { return value.begin(); }

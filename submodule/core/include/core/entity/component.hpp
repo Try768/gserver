@@ -70,9 +70,9 @@ private:
         {}
     };
     private:
-    Internal& internal;
+    const Internal& internal;
     EntityComponent(
-        const std::string& idname,Internal& CCO):
+        const std::string& idname,const Internal& CCO):
         idname(idname),internal(CCO)
         {}
     public:
@@ -95,10 +95,10 @@ class IndeksEntityComponent{
     friend class EntityData;
     friend class chunkmap;
     private:
-    EntityComponent::Internal* entityType;
+    const EntityComponent::Internal* entityType;
     const std::string* idname;
     
-    IndeksEntityComponent(EntityComponent::Internal& component,const std::string& name):
+    IndeksEntityComponent(const EntityComponent::Internal& component,const std::string& name):
      entityType(&component),idname(&name){}
     IndeksEntityComponent(){
         entityType=nullptr;
