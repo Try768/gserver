@@ -12,12 +12,13 @@ class PlayerData:public Coord_manager{
     std::string name;
     OriginWorld origin;
     Typein::Component dynamic_property;
-    
     Var_component_Object runtime_property;
     velo2 velocity;
     XUID xuid;
     std::string name;
     unsigned long long id;
+    bool alive;
+    bool connect;
     unsigned char flag;
     public:
     //friend class zt::ManualObject<Player>;

@@ -24,12 +24,25 @@ void SimulatedPlayer::damageOther(Entity &other, unsigned int damage)
     const auto &pel = reg.getPEL();
     constexpr auto eventytpe = zt::event::player::Type::PlayerHitEntity;
     bool emitdefault = true;
-    pel.getBeforeEvent<eventytpe>().emit({*this, other}, emitdefault);
+    pel.getBeforeEvent<eventytpe>().emit({*this, other,damage}, emitdefault);
     if (emitdefault)
     {
-        pel.getComponent<eventytpe>().emit({*this, other}, reg.getPlayerComponent());
+        pel.getComponent<eventytpe>().emit({*this, other,damage}, reg.getPlayerComponent());
     }
-    pel.getAfterEvent<eventytpe>().emit({*this, other});
+    pel.getAfterEvent<eventytpe>().emit({*this, other,damage});
+}
+void SimulatedPlayer::damageOther(Player &other, unsigned int damage)
+{
+    const auto &reg = this->data.origin.getWorld().getRegister();
+    const auto &pel = reg.getPEL();
+    constexpr auto eventytpe = zt::event::player::Type::PlayerHitPlayer;
+    bool emitdefault = true;
+    pel.getBeforeEvent<eventytpe>().emit({*this, other,damage}, emitdefault);
+    if (emitdefault)
+    {
+        pel.getComponent<eventytpe>().emit({*this, other,damage}, reg.getPlayerComponent());
+    }
+    pel.getAfterEvent<eventytpe>().emit({*this, other,damage});
 }
 void SimulatedPlayer::PlayerInteractWithPlayer(Player& target){
     const auto &reg = this->data.origin.getWorld().getRegister();
@@ -42,4 +55,16 @@ void SimulatedPlayer::PlayerInteractWithPlayer(Player& target){
         pel.getComponent<eventytpe>().emit({*this, target}, reg.getPlayerComponent());
     }
     pel.getAfterEvent<eventytpe>().emit({*this, target});
+}
+void SimulatedPlayer::hurt(unsigned int damage,const std::string& reason){
+    const auto &reg = this->data.origin.getWorld().getRegister();
+    const auto &pel = reg.getPEL();
+    constexpr auto eventytpe = zt::event::player::Type::PlayerHurt;
+    bool emitdefault = true;
+    pel.getBeforeEvent<eventytpe>().emit({*this,damage,reason}, emitdefault);
+    if (emitdefault)
+    {
+        pel.getComponent<eventytpe>().emit({*this,damage,reason}, reg.getPlayerComponent());
+    }
+    pel.getAfterEvent<eventytpe>().emit({*this,damage,reason});
 }

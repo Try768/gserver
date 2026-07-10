@@ -110,7 +110,7 @@ namespace zt
             template<Type eventType> struct params;
             template<> struct params<Type::PlayerHitEntity>{Player& source;Entity& target;unsigned int damage=0;};
             template<> struct params<Type::PlayerHitPlayer>{Player& source;Player& target;unsigned int damage=0;};
-            template<> struct params<Type::PlayerHurt>{Player& target;};
+            template<> struct params<Type::PlayerHurt>{Player& target;unsigned int damage;const std::string& reason;};
             template<> struct params<Type::PlayerInteractWithPlayer>{Player& source;Player& target;};
             template<> struct params<Type::PlayerInput>{SimulatedPlayer& source;zt::input::PlayerInput& input;};
             template<> struct params<Type::PlayerDisconnect>{const XUID& xuid;};
