@@ -15,3 +15,4 @@ test\maploader\internal\component\value.hpp
 submodule/core/build
 submodule/network/include/asio
 dedicated/include/asio
+submodule/core/z_old but gold/WorkerPool.hpp

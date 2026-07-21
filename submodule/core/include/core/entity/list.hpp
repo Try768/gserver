@@ -41,6 +41,10 @@ class EntityData:public Coord_manager{
         inline void swap(const IndeksEntityComponent& indeks){
             this->indeks=indeks;
         }
+        void teleport(Coordinat destination);
+        void moveTo(Coordinat destination);
+        void addVelocity(const velo2& vel);
+
         //const std::string& getname()const noexcept{return name;}
         inline void ref_dump(std::vector<unsigned char>& keluaran)const{
             this->localdump(keluaran);

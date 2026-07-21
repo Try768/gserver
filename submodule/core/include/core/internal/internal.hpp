@@ -289,12 +289,12 @@ private:
     std::vector<unsigned char> arrValue;
     
 public:
-    bool setInt(unsigned int v) { if(type != Type::Integer) return false; intValue = v; return true; }
-    bool setBool(bool v) { if(type != Type::Boolean) return false; boolValue = v; return true; }
-    bool setChar(unsigned char v) { if(type != Type::Character) return false; charValue = v; return true; }
-    bool setLoong(long long v) { if(type != Type::Loong) return false; loongValue = v; return true; }
-    bool setString(const std::string& v) { if(type != Type::String) return false; strValue = v; return true; }
-    bool setArray(const std::vector<unsigned char>& v) { if(type != Type::Array) return false; arrValue = v; return true; }
+    void setInt(unsigned int v) { type=Type::Integer;  intValue = v; }
+    void setBool(bool v) { type=Type::Boolean; boolValue = v; }
+    void setChar(unsigned char v) {  type=Type::Character; charValue = v; }
+    void setLoong(long long v) { type=Type::Loong;  loongValue = v; }
+    void setString(const std::string& v) { type=Type::String;  strValue = v;  }
+    void setArray(const std::vector<unsigned char>& v) { type=Type::Array; arrValue = v;  }
     MultiValue() : type(Type::None) {}
     MultiValue(unsigned int v) : type(Type::Integer), intValue(v) {}
     MultiValue(bool v) : type(Type::Boolean), boolValue(v) {}
@@ -304,11 +304,25 @@ public:
     MultiValue(const std::vector<unsigned char>& v) : type(Type::Array), arrValue(v) {}
 
     Type getType() const { return type; }
+    unsigned int getInt() const { return intValue; }
+    bool getBool() const { return boolValue; }
+    unsigned char getChar() const { return charValue; }
+    long long getLong() const { return loongValue; }
+    const std::string& getString() const { return strValue; }
+    const std::vector<unsigned char>& getArray() const { return arrValue; }
     MultiValue& operator=(const MultiValue& lain){
-        if(lain.type!=this->type){
-            return *this;
+        switch (type)
+        {
+        case Type::Array:
+            arrValue.clear();
+            break;
+        case Type::String:
+            strValue.clear();
+            break;
+        default:
+            break;
         }
-        switch (this->type)
+        switch (lain.type)
         {
         case Type::Integer :{
             this->setInt(lain.getInt());
@@ -339,12 +353,38 @@ public:
         }
         return *this;
     }
-    unsigned int getInt() const { return intValue; }
-    bool getBool() const { return boolValue; }
-    unsigned char getChar() const { return charValue; }
-    long long getLong() const { return loongValue; }
-    const std::string& getString() const { return strValue; }
-    const std::vector<unsigned char>& getArray() const { return arrValue; }
+    MultiValue(const MultiValue& lain){
+        
+        switch (lain.type)
+        {
+        case Type::Integer :{
+            this->setInt(lain.getInt());
+        }
+            break;
+        case Type::String :{
+            this->setString(lain.getString());
+        }
+            break;
+        case Type::Boolean :{
+            this->setBool(lain.getBool());
+        }
+            break;
+        case Type::Loong :{
+            this->setLoong(lain.getLong());
+        }
+            break;
+        case Type::Character :{
+            this->setChar(lain.getChar());
+        }
+            break;
+        case Type::Array :{
+            this->setArray(lain.getArray());
+        }
+            break;
+        default:
+            break;
+        }
+    }
 };
 class Dynamic_Property_Parent{
     protected:

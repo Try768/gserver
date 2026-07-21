@@ -22,8 +22,9 @@ class Entity{
     Entity(EntityData* data,unsigned long long ID,OriginWorld& origin):data(*data),ID(ID),origin(origin){
         assert(data != nullptr);
     }
-    Entity(const Entity& dat):data(dat.data),origin(dat.origin),ID(dat.ID){}
     public:
+    Entity(const Entity& dat):data(dat.data),origin(dat.origin),ID(dat.ID){}
+    Entity(Entity&& dat):data((dat.data)),origin(dat.origin),ID(dat.ID){}
     inline bool storeHealt(){
         if(!data.cache.healt.maxHealt)return false;
         this->data.dynamic_property["healt"].setLoong(data.cache.healt.healt);
@@ -54,6 +55,7 @@ class Entity{
     Coord<long long> getVelocityDiskrit()const;
     Coord<double> getVelocity()const;
     void clearVelocity();
+    
     void teleport(Coordinat destination);
     void jump(double power);
     void walk(bool direction,double speed);
@@ -101,6 +103,8 @@ class SimulatedEntity:public Entity{
     friend class chunkmap;
     friend class EntityManager;
     SimulatedEntity(const Entity& data):Entity(data){
+    }
+    SimulatedEntity(Entity&& data):Entity(std::move(data)){
     }
     SimulatedEntity(EntityData* data,unsigned long long ID,OriginWorld& origin):Entity(data,ID,origin){
     }

@@ -4,7 +4,7 @@
  #include "shared/Client/EntityMove.hpp"
  #include "core/chunk/entitymanager.hpp"
  #include "core/chunk/chunk.hpp"
- #include "world/world.hpp"
+ #include "core/world/world.hpp"
  #include "core/eventListener/eventTable.hpp"
 //EntityManager::ID EntityManager::duplicateEntity(EntityData&& data){
 //    ID tempid;
@@ -14,7 +14,7 @@
 //    return tempid;
 //}
 
-EntityManager::ID EntityManager::createEntity(const EntityData& data){
+EntityManager::ID EntityManager::copyEntity(const EntityData& data){
     ID tempid;
     if(!entityid.getID(tempid))throw std::exception("alright alright thats enough entities");
     auto [it,inserted]=entitybyID.try_emplace(tempid,(nullptr));
@@ -27,6 +27,18 @@ EntityManager::ID EntityManager::createEntity(const EntityData& data){
     }
     return tempid;
 }
+EntityManager::ID EntityManager::moveEntity(EntityData* data){
+    ID tempid;
+    if(!EntityManager::entityid.getID(tempid))throw std::exception("alright alright thats enough entities");
+    auto [it,inserted]=entitybyID.try_emplace(tempid,data);
+    auto itch=chunks.find(data->getchunkcoord());
+    if(itch!=chunks.end()){
+        itch->second.entityInChunk.emplace(tempid);
+    }else{
+        chunks.try_emplace(data->getchunkcoord(),tempid);
+    }
+    return tempid;
+}
 bool EntityManager::delEntity(ID id){
     auto itc=entitybyID.find(id);
     if(itc==entitybyID.end())return false;
@@ -34,7 +46,20 @@ bool EntityManager::delEntity(ID id){
     if(itch!=chunks.end()){
         itch->second.entityInChunk.erase(id);
     }
+    delete itc->second;
     entitybyID.erase(id);
+    EntityManager::entityid.destroyID(id);
+    return true;
+}
+bool EntityManager::releaseEntity(ID id){
+    auto itc=entitybyID.find(id);
+    if(itc==entitybyID.end())return false;
+    auto itch=chunks.find(itc->second->getchunkcoord());
+    if(itch!=chunks.end()){
+        itch->second.entityInChunk.erase(id);
+    }
+    entitybyID.erase(id);
+    EntityManager::entityid.destroyID(id);
     return true;
 }
 double calclinear(Coord<double> vec,double x,double maksVal=2){
@@ -84,6 +109,129 @@ std::optional<Coord<double>> getmaksCanGo(Dimension& dim,Coordinat potition,
     }
     return std::nullopt;
 }
+
+void EntityManager::cleanUpEvent(Entity& data,
+    const Coord<long long> &chunk){
+    //applying impuls
+    EntityMoveSnapshot snapshot;
+    snapshot.id=data.ID;
+    auto perpindahan=data.getVelocityDiskrit();
+    Coord<long long> last_chunk;
+    zt::Collision colision=data.getCollision();
+    double remainTime=1;
+    while(remainTime>0.0){
+        bool first=true,loaded=false;
+        TileSide sideHit=TileSide::None;
+        long long bx=0,by=0;
+        velo2 vel=data.data.velocity;
+        Coord<double> maksgoto{0,0};
+        zt::util::workline(0,0,perpindahan.x,perpindahan.y,[&](long long x,long long y){
+            Coord<long long> chunkPosi{
+                zt::util::floordiv(x,16)+chunk.x,
+                zt::util::floordiv(y,16)+chunk.y
+            };
+            if((chunkPosi != last_chunk)&&(!first)){
+                loaded = this->origin.getDimensionRef().isChunkLoaded(chunkPosi);
+                last_chunk = chunkPosi;
+            }
+            if(!(loaded)){maksgoto=Coord<double>{x,y};return true;}
+            int dirX=(x>bx)-(x<bx);
+            int dirY=(y>by)-(y<by);
+            if(auto maksCanGo=getmaksCanGo(origin.getDimensionRef(),data.getCoordinat()+Coord<long long>{x,y},
+            dirX,dirY,Coord<long long>{x,y},vel,colision,sideHit)){
+                maksgoto=*maksCanGo;
+             
+                return true;
+            }
+            vel.addForce(Coord<double>{-dirX,-dirY});
+            return false;
+        });
+        //lets gooooo todo:add remain time and loop to apply velocity until it can be applied no more
+        data.data.applyVelocity(remainTime,sideHit,maksgoto.x,maksgoto.y,0.1,snapshot);
+        Client::sendEntityMove(snapshot);
+    }
+        // chunk correction
+    if((data.getCoordinat().getGlobal().x!=chunk.x)||(data.getCoordinat().getGlobal().y!=chunk.y)){
+        EntityManager::chunks[data.getCoordinat().getGlobal()].entityInChunk.emplace(data.ID);
+        auto& tc= EntityManager::chunks[chunk];
+        tc.entityInChunk.erase(data.ID);
+        if(tc.entityInChunk.empty())EntityManager::chunks.erase(chunk);
+    }
+}
+void EntityManager::simulate(time_point time_pivot){
+    constexpr auto eventtick=zt::event::entity::Type::Tick;
+    const auto& emiter=reg.getEEL();
+    for(auto& entitiesinchunk:chunks){
+        if(!entitiesinchunk.second.loaded)continue;
+        for(auto entityid=entitiesinchunk.second.entityInChunk.begin();
+        entityid!=entitiesinchunk.second.entityInChunk.end();){
+            auto [entity,status]=EntityManager::getEntity(*entityid);
+            if(!status){
+                entityid=entitiesinchunk.second.entityInChunk.erase(entityid);continue;
+            }
+            SimulatedEntity simulatedEntity(entity);
+            bool emitMainEvent=true;
+            auto now=std::chrono::steady_clock::now();
+            double deltatime=std::chrono::duration<double,std::milli>(now-time_pivot).count();
+            zt::event::entity::params<eventtick> param{simulatedEntity,deltatime};
+            //before event
+            emiter.getBeforeEvent<eventtick>().emit(param,emitMainEvent);
+            //componnent run
+            if(emitMainEvent){
+                emiter.getComponent<eventtick>().emit(
+                    param,entity.getEntityComponent()
+                );
+            }
+            //after event
+            
+            emiter.getAfterEvent<eventtick>().emit(
+                param
+            );
+            cleanUpEvent(simulatedEntity.getEntity(),entitiesinchunk.first);//wip
+            ++entityid;
+        }
+    }
+}
+
+void EntityManager::flush(){
+    this->addVelocity();
+    this->propertyChange();
+    this->ChangeOrigin();
+    this->Teleport();
+    this->AddEntity();
+}
+void EntityManager::addVelocity(){
+    for(const auto& it:this->list.AddVelocity){
+        it.entityPointer->addVelocity(it.vel);
+    }
+    this->list.AddVelocity.clear();
+}
+void EntityManager::propertyChange(){
+    for(const auto& it : this->list.propertyChange){
+        it.entityPointer->dynamic_property.data[it.key]=it.val;
+    }
+    this->list.propertyChange.clear();
+}
+void EntityManager::ChangeOrigin(){
+    for(auto& it: this->list.origin){
+        it.origin.getDimensionRef().entityManager.moveEntity(it.entityPointer);
+        this->releaseEntity(it.ID);
+    }
+    this->list.origin.clear();
+}
+void EntityManager::Teleport(){
+    for(const auto& it:this->list.teleport){
+        it.entityPointer->set_Coordinat(it.nPos);
+    }
+    this->list.teleport.clear();
+}
+void EntityManager::AddEntity(){
+    for(const auto& it:this->list.addE){
+        this->moveEntity(it.entityPointer);
+    }
+    this->list.addE.clear();
+}
+
 /*
 pseduocode for collision checking and correction
 Main
@@ -148,86 +296,3 @@ bool collideRight(entity, nextX)
     return false;
 }
 */
-
-void EntityManager::cleanUpEvent(Entity& data,
-    const Coord<long long> &chunk){
-    //applying impuls
-    EntityMoveSnapshot snapshot;
-    snapshot.id=data.ID;
-    auto perpindahan=data.getVelocityDiskrit();
-    Coord<long long> last_chunk;
-    zt::Collision colision=data.getCollision();
-    double remainTime=1;
-    while(remainTime>0.0){
-        bool first=true,loaded=false;
-        TileSide sideHit=TileSide::None;
-        long long bx=0,by=0;
-        velo2 vel=data.data.velocity;
-        Coord<double> maksgoto{0,0};
-        zt::util::workline(0,0,perpindahan.x,perpindahan.y,[&](long long x,long long y){
-            Coord<long long> chunkPosi{
-                zt::util::floordiv(x,16)+chunk.x,
-                zt::util::floordiv(y,16)+chunk.y
-            };
-            if((chunkPosi != last_chunk)&&(!first)){
-                loaded = this->dimension.isChunkLoaded(chunkPosi);
-                last_chunk = chunkPosi;
-            }
-            if(!(loaded)){maksgoto=Coord<double>{x,y};return true;}
-            int dirX=(x>bx)-(x<bx);
-            int dirY=(y>by)-(y<by);
-            if(auto maksCanGo=getmaksCanGo(dimension,data.getCoordinat()+Coord<long long>{x,y},
-            dirX,dirY,Coord<long long>{x,y},vel,colision,sideHit)){
-                maksgoto=*maksCanGo;
-             
-                return true;
-            }
-            vel.addForce(Coord<double>{-dirX,-dirY});
-            return false;
-        });
-        //lets gooooo todo:add remain time and loop to apply velocity until it can be applied no more
-        data.data.applyVelocity(remainTime,sideHit,maksgoto.x,maksgoto.y,0.1,snapshot);
-        Client::sendEntityMove(snapshot);
-    }
-        // chunk correction
-    if((data.getCoordinat().getGlobal().x!=chunk.x)||(data.getCoordinat().getGlobal().y!=chunk.y)){
-        EntityManager::chunks[data.getCoordinat().getGlobal()].entityInChunk.emplace(data.ID);
-        auto& tc= EntityManager::chunks[chunk];
-        tc.entityInChunk.erase(data.ID);
-        if(tc.entityInChunk.empty())EntityManager::chunks.erase(chunk);
-    }
-}
-void EntityManager::simulate(time_point time_pivot){
-    constexpr auto eventtick=zt::event::entity::Type::Tick;
-    const auto& emiter=reg.getEEL();
-    for(auto& entitiesinchunk:chunks){
-        if(!entitiesinchunk.second.loaded)continue;
-        for(auto entityid=entitiesinchunk.second.entityInChunk.begin();
-        entityid!=entitiesinchunk.second.entityInChunk.end();){
-            auto [entity,status]=EntityManager::getEntity(*entityid);
-            if(!status){
-                entityid=entitiesinchunk.second.entityInChunk.erase(entityid);continue;
-            }
-            SimulatedEntity simulatedEntity(entity);
-            bool emitMainEvent=true;
-            auto now=std::chrono::steady_clock::now();
-            double deltatime=std::chrono::duration<double,std::milli>(now-time_pivot).count();
-            zt::event::entity::params<eventtick> param{simulatedEntity,deltatime};
-            //before event
-            emiter.getBeforeEvent<eventtick>().emit(param,emitMainEvent);
-            //componnent run
-            if(emitMainEvent){
-                emiter.getComponent<eventtick>().emit(
-                    param,entity.getEntityComponent()
-                );
-            }
-            //after event
-            
-            emiter.getAfterEvent<eventtick>().emit(
-                param
-            );
-            cleanUpEvent(simulatedEntity.getEntity(),entitiesinchunk.first);//wip
-            ++entityid;
-        }
-    }
-}

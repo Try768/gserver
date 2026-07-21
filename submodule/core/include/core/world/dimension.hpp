@@ -4,6 +4,8 @@
 
 class Dimension:public Dynamic_Property_Parent{
     friend class EntityManager;
+    friend class Entity;
+
     explicit Dimension(const std::string& dimensionName,
         Room& room,World& world,const std::string& dimensionDir);
     Room& room;
@@ -23,6 +25,7 @@ class Dimension:public Dynamic_Property_Parent{
     void unLoadChunk(const Coord<long long>& chunkCoord);
     bool isChunkLoaded(Coord<long long>& chunkCoord);
     Tile getTile(Coordinat);
+    
     using time_point=std::chrono::steady_clock::time_point;
     void simulate(Registry& reg,time_point time_pivot){
         entityManager.simulate(time_pivot);
