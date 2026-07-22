@@ -6,6 +6,7 @@
  #include "core/chunk/chunk.hpp"
  #include "core/world/world.hpp"
  #include "core/eventListener/eventTable.hpp"
+ #include "core/worker/pool.hpp"
 //EntityManager::ID EntityManager::duplicateEntity(EntityData&& data){
 //    ID tempid;
 //    if(!entityid.getID(tempid))throw std::exception("alright alright thats enough entities");
@@ -158,23 +159,8 @@ void EntityManager::cleanUpEvent(Entity& data,
         if(tc.entityInChunk.empty())EntityManager::chunks.erase(chunk);
     }
 }
-void EntityManager::simulate(time_point time_pivot){
-    constexpr auto eventtick=zt::event::entity::Type::Tick;
-    const auto& emiter=reg.getEEL();
-    for(auto& entitiesinchunk:chunks){
-        if(!entitiesinchunk.second.loaded)continue;
-        for(auto entityid=entitiesinchunk.second.entityInChunk.begin();
-        entityid!=entitiesinchunk.second.entityInChunk.end();){
-            auto [entity,status]=EntityManager::getEntity(*entityid);
-            if(!status){
-                entityid=entitiesinchunk.second.entityInChunk.erase(entityid);continue;
-            }
-            SimulatedEntity simulatedEntity(entity);
-            bool emitMainEvent=true;
-            auto now=std::chrono::steady_clock::now();
-            double deltatime=std::chrono::duration<double,std::milli>(now-time_pivot).count();
-            zt::event::entity::params<eventtick> param{simulatedEntity,deltatime};
-            //before event
+void EntityEmiter::operator()(){
+         //before event
             emiter.getBeforeEvent<eventtick>().emit(param,emitMainEvent);
             //componnent run
             if(emitMainEvent){
@@ -187,10 +173,34 @@ void EntityManager::simulate(time_point time_pivot){
             emiter.getAfterEvent<eventtick>().emit(
                 param
             );
-            cleanUpEvent(simulatedEntity.getEntity(),entitiesinchunk.first);//wip
+    }
+//dari luar
+void EntityManager::simulate(time_point time_pivot){
+    constexpr auto eventtick=zt::event::entity::Type::Tick;
+    const auto& emiter=reg.getEEL();
+    size_t coreCount=std::thread::hardware_concurrency();
+    if(coreCount<=3)coreCount=1;else coreCount-2;
+    zt::WorkerPool<EntityEmiter> workers(coreCount);
+    for(auto& entitiesinchunk:chunks){
+        if(!entitiesinchunk.second.loaded)continue;
+        for(auto entityid=entitiesinchunk.second.entityInChunk.begin();
+        entityid!=entitiesinchunk.second.entityInChunk.end();){
+            auto [ent,status]=EntityManager::getEntity(*entityid);
+            if(!status){
+                entityid=entitiesinchunk.second.entityInChunk.erase(entityid);continue;
+            }
+            Entity entity(ent);
+            SimulatedEntity simulatedEntity(entity);
+            auto now=std::chrono::steady_clock::now();
+            double deltatime=std::chrono::duration<double,std::milli>(now-time_pivot).count();
+            zt::event::entity::params<eventtick> param{simulatedEntity,deltatime};
+            workers.push(EntityEmiter{.emiter=emiter,.param=param,.entity=entity});
+            //cleanUpEvent(simulatedEntity.getEntity(),entitiesinchunk.first);//wip
             ++entityid;
         }
     }
+    workers.join();
+    //clean up event
 }
 
 void EntityManager::flush(){
@@ -199,6 +209,7 @@ void EntityManager::flush(){
     this->ChangeOrigin();
     this->Teleport();
     this->AddEntity();
+    
 }
 void EntityManager::addVelocity(){
     for(const auto& it:this->list.AddVelocity){

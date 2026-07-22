@@ -4,8 +4,17 @@
 #include "core/entity/entity.hpp"
 #include "core/internal/filemanager.hpp"
 #include "core/internal/Permision.hpp"
-#include <deque>
+#include "core/worker/pool.hpp"
 
+#include <deque>
+struct EntityEmiter{
+    const zt::callback::EntityEventListener &emiter;
+    static constexpr zt::event::entity::Type eventtick = zt::event::entity::Tick;
+    zt::event::entity::params<zt::event::entity::Tick> param;
+    bool emitMainEvent=true;
+    Entity entity;
+    void operator()();
+};
 namespace zt::command::entity{
      struct BasePtr {
         EntityData* entityPointer = nullptr;
@@ -172,9 +181,11 @@ class EntityManager:public zt::command::entity::commandParent{
             return entitybyID.find(identity);
         }
         EntityManager(const OriginWorld& origin,DimensionPermision permit,const Registry& reg,
-            const std::string& world_dir):origin(origin),dimentionpermit(permit),reg(reg),database(world_dir+"/entity_map",1204*128){}
-        EntityManager(const OriginWorld& origin ,DimensionPermision permit,const Registry& reg,
-            std::string&& world_dir):origin(origin),dimentionpermit(permit),reg(reg),database(world_dir+"/entity_map",1204*128){}
+            const std::string& world_dir):
+            origin(origin),dimentionpermit(permit),reg(reg),database(world_dir+"/entity_map",1204*128){}
+        EntityManager(OriginWorld&& origin ,DimensionPermision&& permit,const Registry& reg,
+            std::string&& world_dir):
+            origin(origin),dimentionpermit(permit),reg(reg),database(world_dir+"/entity_map",1204*128){}
         bool delEntity(ID id);
         bool releaseEntity(ID id);
         using time_point=std::chrono::steady_clock::time_point;

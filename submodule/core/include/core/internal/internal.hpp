@@ -99,7 +99,7 @@ namespace zt::Internal{
             return 1+size+offset;
         }
         //return len
-        size_t checkArrayBigendian(const std::vector<unsigned char>& buffer,size_t offset,size_t& arrlength,unsigned char& btl){
+        inline size_t checkArrayBigendian(const std::vector<unsigned char>& buffer,size_t offset,size_t& arrlength,unsigned char& btl){
             
             if(buffer.size()<2+offset){
                 return 0;
@@ -228,7 +228,7 @@ inline bool is_number(const std::string& s)
 {
     return !s.empty() && std::all_of(s.begin(), s.end(), [](unsigned char c) { return std::isdigit(c); });
 }
-std::string trimStringToShortSize(const std::string& str){
+inline std::string trimStringToShortSize(const std::string& str){
     std::string temp(str);
     if (temp.size() > std::numeric_limits<unsigned short>::max())
     {

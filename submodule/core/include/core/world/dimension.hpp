@@ -6,7 +6,7 @@ class Dimension:public Dynamic_Property_Parent{
     friend class EntityManager;
     friend class Entity;
 
-    explicit Dimension(const std::string& dimensionName,
+    explicit Dimension(const std::string& dimensionName,DimensionPermision permit,
         Room& room,World& world,const std::string& dimensionDir);
     Room& room;
     std::string name;
